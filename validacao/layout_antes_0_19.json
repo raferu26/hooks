@@ -1,0 +1,34 @@
+[
+ {
+  "janela": "1280x720",
+  "video": "233x414",
+  "razao": 0.5625,
+  "area_pct": 10.5,
+  "linha_do_tempo_px": 131,
+  "rolagem_horizontal": false
+ },
+ {
+  "janela": "1366x768",
+  "video": "280x497",
+  "razao": 0.5625,
+  "area_pct": 13.3,
+  "linha_do_tempo_px": 131,
+  "rolagem_horizontal": false
+ },
+ {
+  "janela": "1440x900",
+  "video": "354x629",
+  "razao": 0.5625,
+  "area_pct": 17.2,
+  "linha_do_tempo_px": 131,
+  "rolagem_horizontal": false
+ },
+ {
+  "janela": "1920x1080",
+  "video": "455x809",
+  "razao": 0.5625,
+  "area_pct": 17.8,
+  "linha_do_tempo_px": 131,
+  "rolagem_horizontal": false
+ }
+]

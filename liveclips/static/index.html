@@ -181,7 +181,11 @@ dialog form,dialog .body{padding:20px 24px 24px;display:grid;gap:14px}
 
 /* ───────────── ESTÚDIO ───────────── */
 #studio{position:fixed;inset:0;z-index:50;background:var(--bg);display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden}
-.tlzone{min-height:0}
+.tlzone{min-height:0;position:relative}
+.vsplit{position:absolute;left:0;right:0;top:-4px;height:8px;cursor:row-resize;z-index:8;touch-action:none}
+.vsplit::after{content:'';position:absolute;left:50%;top:2px;width:44px;height:4px;margin-left:-22px;border-radius:2px;background:var(--line2);opacity:0;transition:opacity .15s}
+.vsplit:hover::after,.vsplit:focus-visible::after,.vsplit.drag::after{opacity:1}
+.vsplit:focus-visible{outline:2px solid var(--pink,#ff4d8d);outline-offset:-2px}
 .sbar{display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--line);background:var(--side);flex-wrap:nowrap;min-width:0}
 .sbar>*{flex:none}.sbar .grow{flex:1 1 0;min-width:4px}
 .sbar .export{display:inline-flex;align-items:stretch}.sbar .export select{width:auto;border-top-right-radius:0;border-bottom-right-radius:0;border-right:0;padding:0 8px;font-size:13px}.sbar .export button{border-top-left-radius:0;border-bottom-left-radius:0}
@@ -192,7 +196,8 @@ button.chip{cursor:default;font:inherit;font-size:12px}button.chip:not(:disabled
 #stLeft{border-right:1px solid var(--line)}
 .scol h3{padding:12px 14px 4px}
 .scol.right{border-left:1px solid var(--line);padding:8px;display:flex;flex-direction:column;gap:6px}
-.stage{display:grid;grid-template-rows:minmax(0,1fr) auto;justify-items:center;gap:8px;padding:10px 10px 8px;min-width:0;min-height:0;background:#08080b}
+.stage{display:block;min-width:0;min-height:0;background:#08080b}
+.sbox{display:grid;grid-template-rows:minmax(0,1fr) auto;justify-items:center;gap:8px;padding:10px 10px 8px;box-sizing:border-box;height:100%;min-width:0;min-height:0}
 .phone{position:relative;height:100%;max-width:100%;aspect-ratio:9/16;min-height:0;background:#000;border-radius:14px;overflow:hidden;border:1px solid var(--line2);box-shadow:0 18px 50px #000c;container-type:size}
 .phone video{cursor:pointer}
 .phone video{width:100%;height:100%;object-fit:contain;display:block;background:#000}
@@ -235,7 +240,8 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
 .item{border:1px solid var(--line);border-radius:9px;padding:9px;background:var(--panel2);display:grid;gap:8px}
 .item.sel{border-color:var(--amber)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.tl-wrap{border-top:1px solid var(--line);background:#0b0b0e;display:grid;grid-template-columns:78px minmax(0,1fr);max-height:42vh;overflow-y:auto}
+.tl-wrap{border-top:1px solid var(--line);background:#0b0b0e;display:grid;grid-template-columns:78px minmax(0,1fr);max-height:var(--tlh,42vh);overflow-y:auto}
+#studio.tl-sized .tl-wrap{height:var(--tlh)}
 .tl-heads{border-right:1px solid var(--line);background:var(--panel)}
 .tl-heads div{height:30px;display:flex;align-items:center;padding:0 10px;font-size:12px;color:var(--muted);border-bottom:1px solid #1c1d25;box-sizing:border-box}
 .tl-heads div:first-child{height:26px}
@@ -364,6 +370,14 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
 @media (prefers-reduced-motion:reduce){.rbar.indet>i{animation:none;left:0;width:100%!important;opacity:.45}.rbar>i{transition:none}}
 .rtask .ract{display:flex;gap:6px;flex-wrap:wrap}.rtask .ract button{padding:4px 9px;font-size:11.5px}
 #studio.tl-folded #tlWrap{display:none}
+/* Prévia dominante: com largura de sobra, os controles vão para o lado e o vídeo usa a altura toda (9:16 preservado). */
+.stage{container:stage/inline-size}
+@container stage (min-width:520px){
+ .sbox{display:flex;flex-direction:row;align-items:stretch;justify-content:center;gap:14px;padding:8px 12px}
+ .sbox .phone{height:100%;flex:none;max-width:none}
+ .sbox .transport{flex-direction:row;flex-wrap:wrap;align-content:flex-start;justify-content:flex-start;width:168px;flex:none;gap:8px;padding-top:2px}
+ .sbox .transport .switch{flex:1 0 100%}
+}
 
 </style></head>
 <body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -476,11 +490,12 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
  </div>
  <div class="smain">
   <section class="scol" id="stLeft" aria-label="Fala"></section>
-  <section class="stage"><div class="phone" id="phone"><video id="stVideo" playsinline preload="auto"></video><div class="live" id="live"></div><div class="safe hide" id="safe"><i class="top"></i><i class="bottom"></i><i class="side"></i></div><div class="wait hide" id="stWait"></div><div class="pbusy hide" id="stBusy">Gerando nova prévia…</div><div class="stale hide" id="stStale"><span>Prévia anterior. Cortes, zoom, cor e layout novos entram ao atualizar; legendas e títulos já aparecem ao vivo.</span><button type="button" class="small" id="stStaleGo">Atualizar (P)</button></div></div>
-   <div class="transport"><button id="stPlay" class="small" aria-label="Reproduzir" title="Reproduzir / pausar (Espaço)">▶</button><button id="stMute" class="small quiet" aria-label="Tirar o som" title="Som">🔊</button><span class="time" id="stTime">0:00,0</span><label class="switch mini"><input id="stAuto" type="checkbox" checked>Prévia automática</label><label class="switch mini"><input id="liveToggle" type="checkbox" checked>Legendas ao vivo</label><label class="switch mini"><input id="safeToggle" type="checkbox">Zonas seguras</label></div></section>
+  <section class="stage"><div class="sbox"><div class="phone" id="phone"><video id="stVideo" playsinline preload="auto"></video><div class="live" id="live"></div><div class="safe hide" id="safe"><i class="top"></i><i class="bottom"></i><i class="side"></i></div><div class="wait hide" id="stWait"></div><div class="pbusy hide" id="stBusy">Gerando nova prévia…</div><div class="stale hide" id="stStale"><span>Prévia anterior. Cortes, zoom, cor e layout novos entram ao atualizar; legendas e títulos já aparecem ao vivo.</span><button type="button" class="small" id="stStaleGo">Atualizar (P)</button></div></div>
+   <div class="transport"><button id="stPlay" class="small" aria-label="Reproduzir" title="Reproduzir / pausar (Espaço)">▶</button><button id="stMute" class="small quiet" aria-label="Tirar o som" title="Som">🔊</button><span class="time" id="stTime">0:00,0</span><label class="switch mini"><input id="stAuto" type="checkbox" checked>Prévia automática</label><label class="switch mini"><input id="liveToggle" type="checkbox" checked>Legendas ao vivo</label><label class="switch mini"><input id="safeToggle" type="checkbox">Zonas seguras</label></div></div></section>
   <section class="scol right" id="stRight" aria-label="Inspetor"></section>
  </div>
  <div class="tlzone">
+  <div class="vsplit" id="tlSplit" role="separator" aria-orientation="horizontal" aria-label="Altura da linha do tempo" tabindex="0" title="Arraste para ajustar a altura da linha do tempo · duplo clique restaura"></div>
   <div class="tlbar"><span class="muted small">Linha do tempo</span><button id="tlOut" class="small quiet" aria-label="Afastar" title="Afastar (−)">－</button><button id="tlIn" class="small quiet" aria-label="Aproximar" title="Aproximar (+)">＋</button><button id="tlAll" class="small quiet" aria-pressed="false" title="Mostra também as pistas vazias de zoom, ritmo, imagens e títulos">Todas as pistas</button><button id="tlFold" class="small quiet" aria-pressed="false" title="Recolhe a linha do tempo para a prévia ficar maior (F)">Ampliar prévia</button><span class="grow"></span><span id="selInfo" class="muted small">Arraste na régua para selecionar um trecho.</span></div>
   <div class="tl-wrap" id="tlWrap"><div class="tl-heads" id="tlHeads"></div><div class="tl-scroll" id="tlScroll"><div class="tl" id="tl"></div></div></div>
  </div>
@@ -809,16 +824,22 @@ async function renderMusicPage(){const box=$('musicPage');await loadMusic();box.
 const CAP_LABELS={auto:'Automático (segue o estilo)',dynamic:'Dinâmica',clean:'Limpa',bold:'Impactante',minimal:'Minimalista',impact:'Caixa alta animada',pop:'Entrada animada',box:'Faixa escura'};
 const TITLE_LABELS={big:'Grande',bar:'Faixa',top:'Topo'},POS_LABELS={top:'Topo',center:'Centro',bottom:'Base'},CURVES={smooth:'Suave',snap:'Seco',punch:'Impacto',ease:'Gradual',linear:'Linear'};
 const ST={open:false,id:'',data:null,proj:null,lines:[],linesEdited:false,overrides:{},start:0,end:0,sel:null,item:null,secs:new Set(),pps:0,fit:0,undo:[],redo:[],dirty:false,music:null,anchor:null,edit:-1,ending:false,videoKey:'',busy:false,raf:0,rev:0,savedRev:0,saving:false,saveErr:'',unlearned:false,saveTimer:0};
-const PREF={get autoPrev(){try{return localStorage.getItem('hk-autoprev')!=='0'}catch(e){return true}},set autoPrev(v){try{localStorage.setItem('hk-autoprev',v?'1':'0')}catch(e){}},get foldTl(){try{return localStorage.getItem('hk-foldtl')==='1'}catch(e){return false}},set foldTl(v){try{localStorage.setItem('hk-foldtl',v?'1':'0')}catch(e){}},get allTracks(){try{return localStorage.getItem('hk-alltracks')==='1'}catch(e){return false}},set allTracks(v){try{localStorage.setItem('hk-alltracks',v?'1':'0')}catch(e){}}};
+const PREF={get autoPrev(){try{return localStorage.getItem('hk-autoprev')!=='0'}catch(e){return true}},set autoPrev(v){try{localStorage.setItem('hk-autoprev',v?'1':'0')}catch(e){}},get tlh(){try{const v=+localStorage.getItem('hk-tlh');return v>0?v:0}catch(e){return 0}},set tlh(v){try{v?localStorage.setItem('hk-tlh',String(Math.round(v))):localStorage.removeItem('hk-tlh')}catch(e){}},get foldTl(){try{return localStorage.getItem('hk-foldtl')==='1'}catch(e){return false}},set foldTl(v){try{localStorage.setItem('hk-foldtl',v?'1':'0')}catch(e){}},get allTracks(){try{return localStorage.getItem('hk-alltracks')==='1'}catch(e){return false}},set allTracks(v){try{localStorage.setItem('hk-alltracks',v?'1':'0')}catch(e){}}};
 const clone=o=>JSON.parse(JSON.stringify(o));
 const dur=()=>ST.data.duration;
 const uidc=p=>p+Math.random().toString(36).slice(2,8);
 
 function applyFold(){const f=PREF.foldTl;$('studio').classList.toggle('tl-folded',f);const b=$('tlFold');b.setAttribute('aria-pressed',f);b.textContent=f?'Mostrar linha do tempo':'Ampliar prévia';if(!f&&ST.open)fitTimeline()}
+function applyTlh(){const v=PREF.tlh,s=$('studio');if(v){s.style.setProperty('--tlh',v+'px');s.classList.add('tl-sized')}else{s.style.removeProperty('--tlh');s.classList.remove('tl-sized')}}
+(()=>{const sp=$('tlSplit');const maxH=()=>Math.round(innerHeight*.5);const set=v=>{PREF.tlh=clamp(v,64,maxH());applyTlh();if(ST.open)fitTimeline()};
+ sp.addEventListener('pointerdown',e=>{e.preventDefault();sp.setPointerCapture(e.pointerId);sp.classList.add('drag');const y0=e.clientY,h0=$('tlWrap').getBoundingClientRect().height;
+  const mv=ev=>set(h0-(ev.clientY-y0));const up=()=>{sp.classList.remove('drag');sp.removeEventListener('pointermove',mv);sp.removeEventListener('pointerup',up)};sp.addEventListener('pointermove',mv);sp.addEventListener('pointerup',up)});
+ sp.addEventListener('dblclick',()=>{PREF.tlh=0;applyTlh();if(ST.open)fitTimeline()});
+ sp.addEventListener('keydown',e=>{if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();const h=$('tlWrap').getBoundingClientRect().height;set(h+(e.key==='ArrowUp'?24:-24))}})})();
 function toggleFold(){PREF.foldTl=!PREF.foldTl;applyFold()}
 async function openStudio(id){
  try{const d=await api('/api/project/get',{id});clearTimeout(ST.saveTimer);Object.assign(ST,{plan:null,chat:null,open:true,id,data:d,proj:normProject(d.project),lines:clone(d.lines),linesEdited:d.lines_edited,overrides:{...d.overrides},start:d.start,end:d.end,sel:null,item:null,undo:[],redo:[],dirty:false,music:d.music,anchor:null,edit:-1,videoKey:'',rev:0,savedRev:0,saving:false,saveErr:'',unlearned:false});
- document.body.style.overflow='hidden';$('studio').classList.remove('hide');fillQuality(d);ST.pps=0;ST.cursor=0;fitTimeline();drawAll();applyFold();drawFlow();ensurePreview();cancelAnimationFrame(ST.raf);loop()}catch(e){toast(e.message,true)}}
+ document.body.style.overflow='hidden';$('studio').classList.remove('hide');fillQuality(d);ST.pps=0;ST.cursor=0;fitTimeline();drawAll();applyTlh();applyFold();drawFlow();ensurePreview();cancelAnimationFrame(ST.raf);loop()}catch(e){toast(e.message,true)}}
 function fillQuality(d){const q=$('stQuality'),modes=d.catalog.quality_modes||[];q.innerHTML=modes.map(m=>`<option value="${m.id}" title="${esc(m.note)}">${esc(m.label)}</option>`).join('');q.value=d.profile.quality_mode||'equilibrado';q.title=(modes.find(m=>m.id===q.value)||{}).note||''}
 $('stQuality').onchange=()=>{const m=(ST.data.catalog.quality_modes||[]).find(x=>x.id===$('stQuality').value);$('stQuality').title=m?.note||'';if(m)toast(m.label+': '+m.note)};
 $('stStaleGo').onclick=()=>refreshPreview();
@@ -1117,7 +1138,7 @@ const X=t=>t*ST.pps,T_=x=>x/ST.pps;
 /* 3 pistas fixas (Vídeo, Legendas, Áudio); Zoom, Ritmo, Imagens e Títulos aparecem quando têm conteúdo
    (ou sempre, com "Todas as pistas"). */
 function tlRows(){const P=ST.proj,all=PREF.allTracks,autoZ=(ST.data.decisions||[]).some(x=>x.kind==='zoom'&&(ST.overrides[x.id]??x.enabled));
- const r=[['video','Vídeo',30,true],['zoom','Zoom',30,all||P.zooms.length||autoZ],['speed','Ritmo',30,all||P.speeds.length||P.freezes.length],['image','Imagens',30,all||P.overlays.length],['speech','Legendas',30,true],['title','Títulos',30,all||P.titles.length||P.teaser],['audio','Áudio',44,true]].filter(x=>x[3]);
+ const r=[['video','Vídeo',30,true],['zoom','Zoom',30,all||P.zooms.length||autoZ],['speed','Ritmo',30,all||P.speeds.length||P.freezes.length],['image','Imagens',30,all||P.overlays.length],['speech','Legendas',30,true],['title','Títulos',30,all||P.titles.length||P.teaser],['audio','Áudio',36,true]].filter(x=>x[3]);
  let top=26;return r.map(([k,label,h])=>{const o={k,label,h,top};top+=h;return o})}
 function drawTimeline(){if(!ST.open)return;const D=dur(),W=Math.ceil(D*ST.pps)+24,P=ST.proj,rows=tlRows(),R=Object.fromEntries(rows.map(x=>[x.k,x.top])),H=rows.reduce((a,x)=>a+x.h,26);
  $('tlHeads').innerHTML='<div></div>'+rows.map(x=>`<div style="height:${x.h}px">${x.label}</div>`).join('');

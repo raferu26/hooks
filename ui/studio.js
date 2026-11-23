@@ -2,16 +2,22 @@
 const CAP_LABELS={auto:'Automático (segue o estilo)',dynamic:'Dinâmica',clean:'Limpa',bold:'Impactante',minimal:'Minimalista',impact:'Caixa alta animada',pop:'Entrada animada',box:'Faixa escura'};
 const TITLE_LABELS={big:'Grande',bar:'Faixa',top:'Topo'},POS_LABELS={top:'Topo',center:'Centro',bottom:'Base'},CURVES={smooth:'Suave',snap:'Seco',punch:'Impacto',ease:'Gradual',linear:'Linear'};
 const ST={open:false,id:'',data:null,proj:null,lines:[],linesEdited:false,overrides:{},start:0,end:0,sel:null,item:null,secs:new Set(),pps:0,fit:0,undo:[],redo:[],dirty:false,music:null,anchor:null,edit:-1,ending:false,videoKey:'',busy:false,raf:0,rev:0,savedRev:0,saving:false,saveErr:'',unlearned:false,saveTimer:0};
-const PREF={get autoPrev(){try{return localStorage.getItem('hk-autoprev')!=='0'}catch(e){return true}},set autoPrev(v){try{localStorage.setItem('hk-autoprev',v?'1':'0')}catch(e){}},get foldTl(){try{return localStorage.getItem('hk-foldtl')==='1'}catch(e){return false}},set foldTl(v){try{localStorage.setItem('hk-foldtl',v?'1':'0')}catch(e){}},get allTracks(){try{return localStorage.getItem('hk-alltracks')==='1'}catch(e){return false}},set allTracks(v){try{localStorage.setItem('hk-alltracks',v?'1':'0')}catch(e){}}};
+const PREF={get autoPrev(){try{return localStorage.getItem('hk-autoprev')!=='0'}catch(e){return true}},set autoPrev(v){try{localStorage.setItem('hk-autoprev',v?'1':'0')}catch(e){}},get tlh(){try{const v=+localStorage.getItem('hk-tlh');return v>0?v:0}catch(e){return 0}},set tlh(v){try{v?localStorage.setItem('hk-tlh',String(Math.round(v))):localStorage.removeItem('hk-tlh')}catch(e){}},get foldTl(){try{return localStorage.getItem('hk-foldtl')==='1'}catch(e){return false}},set foldTl(v){try{localStorage.setItem('hk-foldtl',v?'1':'0')}catch(e){}},get allTracks(){try{return localStorage.getItem('hk-alltracks')==='1'}catch(e){return false}},set allTracks(v){try{localStorage.setItem('hk-alltracks',v?'1':'0')}catch(e){}}};
 const clone=o=>JSON.parse(JSON.stringify(o));
 const dur=()=>ST.data.duration;
 const uidc=p=>p+Math.random().toString(36).slice(2,8);
 
 function applyFold(){const f=PREF.foldTl;$('studio').classList.toggle('tl-folded',f);const b=$('tlFold');b.setAttribute('aria-pressed',f);b.textContent=f?'Mostrar linha do tempo':'Ampliar prévia';if(!f&&ST.open)fitTimeline()}
+function applyTlh(){const v=PREF.tlh,s=$('studio');if(v){s.style.setProperty('--tlh',v+'px');s.classList.add('tl-sized')}else{s.style.removeProperty('--tlh');s.classList.remove('tl-sized')}}
+(()=>{const sp=$('tlSplit');const maxH=()=>Math.round(innerHeight*.5);const set=v=>{PREF.tlh=clamp(v,64,maxH());applyTlh();if(ST.open)fitTimeline()};
+ sp.addEventListener('pointerdown',e=>{e.preventDefault();sp.setPointerCapture(e.pointerId);sp.classList.add('drag');const y0=e.clientY,h0=$('tlWrap').getBoundingClientRect().height;
+  const mv=ev=>set(h0-(ev.clientY-y0));const up=()=>{sp.classList.remove('drag');sp.removeEventListener('pointermove',mv);sp.removeEventListener('pointerup',up)};sp.addEventListener('pointermove',mv);sp.addEventListener('pointerup',up)});
+ sp.addEventListener('dblclick',()=>{PREF.tlh=0;applyTlh();if(ST.open)fitTimeline()});
+ sp.addEventListener('keydown',e=>{if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();const h=$('tlWrap').getBoundingClientRect().height;set(h+(e.key==='ArrowUp'?24:-24))}})})();
 function toggleFold(){PREF.foldTl=!PREF.foldTl;applyFold()}
 async function openStudio(id){
  try{const d=await api('/api/project/get',{id});clearTimeout(ST.saveTimer);Object.assign(ST,{plan:null,chat:null,open:true,id,data:d,proj:normProject(d.project),lines:clone(d.lines),linesEdited:d.lines_edited,overrides:{...d.overrides},start:d.start,end:d.end,sel:null,item:null,undo:[],redo:[],dirty:false,music:d.music,anchor:null,edit:-1,videoKey:'',rev:0,savedRev:0,saving:false,saveErr:'',unlearned:false});
- document.body.style.overflow='hidden';$('studio').classList.remove('hide');fillQuality(d);ST.pps=0;ST.cursor=0;fitTimeline();drawAll();applyFold();drawFlow();ensurePreview();cancelAnimationFrame(ST.raf);loop()}catch(e){toast(e.message,true)}}
+ document.body.style.overflow='hidden';$('studio').classList.remove('hide');fillQuality(d);ST.pps=0;ST.cursor=0;fitTimeline();drawAll();applyTlh();applyFold();drawFlow();ensurePreview();cancelAnimationFrame(ST.raf);loop()}catch(e){toast(e.message,true)}}
 function fillQuality(d){const q=$('stQuality'),modes=d.catalog.quality_modes||[];q.innerHTML=modes.map(m=>`<option value="${m.id}" title="${esc(m.note)}">${esc(m.label)}</option>`).join('');q.value=d.profile.quality_mode||'equilibrado';q.title=(modes.find(m=>m.id===q.value)||{}).note||''}
 $('stQuality').onchange=()=>{const m=(ST.data.catalog.quality_modes||[]).find(x=>x.id===$('stQuality').value);$('stQuality').title=m?.note||'';if(m)toast(m.label+': '+m.note)};
 $('stStaleGo').onclick=()=>refreshPreview();
@@ -310,7 +316,7 @@ const X=t=>t*ST.pps,T_=x=>x/ST.pps;
 /* 3 pistas fixas (Vídeo, Legendas, Áudio); Zoom, Ritmo, Imagens e Títulos aparecem quando têm conteúdo
    (ou sempre, com "Todas as pistas"). */
 function tlRows(){const P=ST.proj,all=PREF.allTracks,autoZ=(ST.data.decisions||[]).some(x=>x.kind==='zoom'&&(ST.overrides[x.id]??x.enabled));
- const r=[['video','Vídeo',30,true],['zoom','Zoom',30,all||P.zooms.length||autoZ],['speed','Ritmo',30,all||P.speeds.length||P.freezes.length],['image','Imagens',30,all||P.overlays.length],['speech','Legendas',30,true],['title','Títulos',30,all||P.titles.length||P.teaser],['audio','Áudio',44,true]].filter(x=>x[3]);
+ const r=[['video','Vídeo',30,true],['zoom','Zoom',30,all||P.zooms.length||autoZ],['speed','Ritmo',30,all||P.speeds.length||P.freezes.length],['image','Imagens',30,all||P.overlays.length],['speech','Legendas',30,true],['title','Títulos',30,all||P.titles.length||P.teaser],['audio','Áudio',36,true]].filter(x=>x[3]);
  let top=26;return r.map(([k,label,h])=>{const o={k,label,h,top};top+=h;return o})}
 function drawTimeline(){if(!ST.open)return;const D=dur(),W=Math.ceil(D*ST.pps)+24,P=ST.proj,rows=tlRows(),R=Object.fromEntries(rows.map(x=>[x.k,x.top])),H=rows.reduce((a,x)=>a+x.h,26);
  $('tlHeads').innerHTML='<div></div>'+rows.map(x=>`<div style="height:${x.h}px">${x.label}</div>`).join('');

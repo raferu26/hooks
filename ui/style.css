@@ -177,7 +177,11 @@ dialog form,dialog .body{padding:20px 24px 24px;display:grid;gap:14px}
 
 /* ───────────── ESTÚDIO ───────────── */
 #studio{position:fixed;inset:0;z-index:50;background:var(--bg);display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden}
-.tlzone{min-height:0}
+.tlzone{min-height:0;position:relative}
+.vsplit{position:absolute;left:0;right:0;top:-4px;height:8px;cursor:row-resize;z-index:8;touch-action:none}
+.vsplit::after{content:'';position:absolute;left:50%;top:2px;width:44px;height:4px;margin-left:-22px;border-radius:2px;background:var(--line2);opacity:0;transition:opacity .15s}
+.vsplit:hover::after,.vsplit:focus-visible::after,.vsplit.drag::after{opacity:1}
+.vsplit:focus-visible{outline:2px solid var(--pink,#ff4d8d);outline-offset:-2px}
 .sbar{display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--line);background:var(--side);flex-wrap:nowrap;min-width:0}
 .sbar>*{flex:none}.sbar .grow{flex:1 1 0;min-width:4px}
 .sbar .export{display:inline-flex;align-items:stretch}.sbar .export select{width:auto;border-top-right-radius:0;border-bottom-right-radius:0;border-right:0;padding:0 8px;font-size:13px}.sbar .export button{border-top-left-radius:0;border-bottom-left-radius:0}
@@ -188,7 +192,8 @@ button.chip{cursor:default;font:inherit;font-size:12px}button.chip:not(:disabled
 #stLeft{border-right:1px solid var(--line)}
 .scol h3{padding:12px 14px 4px}
 .scol.right{border-left:1px solid var(--line);padding:8px;display:flex;flex-direction:column;gap:6px}
-.stage{display:grid;grid-template-rows:minmax(0,1fr) auto;justify-items:center;gap:8px;padding:10px 10px 8px;min-width:0;min-height:0;background:#08080b}
+.stage{display:block;min-width:0;min-height:0;background:#08080b}
+.sbox{display:grid;grid-template-rows:minmax(0,1fr) auto;justify-items:center;gap:8px;padding:10px 10px 8px;box-sizing:border-box;height:100%;min-width:0;min-height:0}
 .phone{position:relative;height:100%;max-width:100%;aspect-ratio:9/16;min-height:0;background:#000;border-radius:14px;overflow:hidden;border:1px solid var(--line2);box-shadow:0 18px 50px #000c;container-type:size}
 .phone video{cursor:pointer}
 .phone video{width:100%;height:100%;object-fit:contain;display:block;background:#000}
@@ -231,7 +236,8 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
 .item{border:1px solid var(--line);border-radius:9px;padding:9px;background:var(--panel2);display:grid;gap:8px}
 .item.sel{border-color:var(--amber)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.tl-wrap{border-top:1px solid var(--line);background:#0b0b0e;display:grid;grid-template-columns:78px minmax(0,1fr);max-height:42vh;overflow-y:auto}
+.tl-wrap{border-top:1px solid var(--line);background:#0b0b0e;display:grid;grid-template-columns:78px minmax(0,1fr);max-height:var(--tlh,42vh);overflow-y:auto}
+#studio.tl-sized .tl-wrap{height:var(--tlh)}
 .tl-heads{border-right:1px solid var(--line);background:var(--panel)}
 .tl-heads div{height:30px;display:flex;align-items:center;padding:0 10px;font-size:12px;color:var(--muted);border-bottom:1px solid #1c1d25;box-sizing:border-box}
 .tl-heads div:first-child{height:26px}
@@ -360,3 +366,11 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
 @media (prefers-reduced-motion:reduce){.rbar.indet>i{animation:none;left:0;width:100%!important;opacity:.45}.rbar>i{transition:none}}
 .rtask .ract{display:flex;gap:6px;flex-wrap:wrap}.rtask .ract button{padding:4px 9px;font-size:11.5px}
 #studio.tl-folded #tlWrap{display:none}
+/* Prévia dominante: com largura de sobra, os controles vão para o lado e o vídeo usa a altura toda (9:16 preservado). */
+.stage{container:stage/inline-size}
+@container stage (min-width:520px){
+ .sbox{display:flex;flex-direction:row;align-items:stretch;justify-content:center;gap:14px;padding:8px 12px}
+ .sbox .phone{height:100%;flex:none;max-width:none}
+ .sbox .transport{flex-direction:row;flex-wrap:wrap;align-content:flex-start;justify-content:flex-start;width:168px;flex:none;gap:8px;padding-top:2px}
+ .sbox .transport .switch{flex:1 0 100%}
+}
