@@ -34,3 +34,12 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 - **RESULTADO (Linux, sintético, com a timeline visível):** 1280×720 **233×414 → 280×497 (+44% de área)**; 1366×768 → 307×545 (+20%); 1440×900 → 381×677 (+16%); 1920×1080 → 482×857 (+12%). Razão 0,5625 em todos; sem rolagem horizontal. Arrastando o divisor 40 px, o vídeo cresce mais (medido no e2e).
 - **Limite honesto:** em telas altas o ganho é pequeno porque o vídeo vertical já usa ~83% da altura útil; mais espaço exige reduzir timeline/barra (o divisor permite).
 - **Não validado:** telas reais, escalas de DPI do Windows, pessoas.
+
+## [Prévia mais rápida: rascunho com filtros baratos] — 23/11/2026 (P03)
+- **ANTES:** prévia de 28 s de vídeo = **15,8 s** de `_do_render` (perfil: 15,55 s só no FFmpeg). e2e: **11 s** até a prévia nova (clipe 14,5 s). O grafo de filtros rodava a 1080×1920 (blur gaussiano σ=28 e Lanczos em tela cheia, `filter_complex_threads 1`) e só no fim reduzia para 540×960.
+- **DIAGNÓSTICO (medido com `ffmpeg` isolando filtros):** blur do fundo em tela cheia + Lanczos eram o gargalo (variantes: atual 15,7 s · blur barato 11,9 s · bilinear 14,6 s · ambos **6,4 s**).
+- **ALTERAÇÃO** (`liveclips/media.py`, só no rascunho; **exportação inalterada**): fundo desfocado calculado a 1/4 do tamanho (σ=7) e ampliado; `lanczos`→`bilinear` nas escalas do rascunho. Mesmo canvas 1080×1920, sem mexer em coordenadas de títulos/legendas/overlays.
+- **TESTE:** 126 testes relacionados OK (`test_corpus_cortes`, `test_engine`, `test_modos_qualidade`, `test_studio_api`, `test_studio_extras`, `test_ligacao_modulos`, `test_blur`); e2e completo sem falhas (3 execuções).
+- **RESULTADO:** `_do_render` 28 s de vídeo **15,8 → 6,6 s (−58%)**; e2e "prévia nova pronta" **11 s → 5–6 s** (resolução de 1 s). Fidelidade: novo rascunho × antigo SSIM **0,991**, PSNR **43,5 dB** (fonte sintética).
+- **Não validado:** layouts ao vivo (webcam+jogo) só ganham o `bilinear` (blur não se aplica); vídeo real; CPU com 2+ pistas disputando núcleos (i7-3770).
+- **Próximo:** prévia imediata sobreposta (L1) e render parcial só se a medição mostrar necessidade; latência restante = debounce do autosave (1,6 s) + fila + render.

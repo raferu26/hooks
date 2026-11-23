@@ -5,7 +5,7 @@ Evidência = leitura do código (`ui/`) e e2e `ui/e2e10.py` (1440×900, Linux, m
 |---|---|---|---|---|---|
 | P01 | 8 abas | **Resolvido** (inspetor + seções recolhíveis) | e2e `sem_abas`, `secoes`; sem `role=tab` no `#stRight` | e2e | Revisar nomes/ordem das 9 seções com pessoas |
 | P02 | Preview pequeno | **Melhorado**: 15–20% da janela (era 10–18%); controles ao lado; divisor da timeline; F recolhe | `validacao/medir_layout.py`; e2e `divisor_*`, `foco_*` | e2e | Medir com pessoas; avaliar barra superior mais baixa |
-| P03 | Prévia lenta | **Parcial**: prévia anterior continua; nova em ~11 s p/ 14,5 s; sem camadas | e2e `segundos_ate_previa_nova`=11 | e2e | Protótipo L1 (HTML imediato) sobre `timing_for` (A02) |
+| P03 | Prévia lenta | **Melhorado**: 11 s → 5–6 s (clipe 14,5 s); 15,8 → 6,6 s (28 s de vídeo); sem camadas L1/L2 | profiling + e2e `segundos_ate_previa_nova` | e2e, 126 testes de render | Avaliar sobreposição imediata (L1) após medir a latência restante |
 | P04 | Salvar ≠ renderizar | **Resolvido** | Ctrl+S → `saveNow()`; autosave `learn=False` | `test_salvar_previa` (9), e2e | — |
 | P05 | 8 pistas | **Resolvido** em 3 + extras | e2e `tres_pistas`, `pista_zoom_aparece`, `todas_as_pistas` | e2e | Ripple e arrasto sem redesenho (snap já feito) |
 | P06 | Hierarquia visual | **Pendente** | sem tokens de design; tipografia 10–12 px | — | Design system (A05) |
