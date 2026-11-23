@@ -11,7 +11,7 @@
 | Anteriores | 24 testes-chave (salvar/prévia, modos, sem IA) OK em 56 s; pyflakes sem nome indefinido | — |
 
 **Classificação (nada foi mudado no código para obter o verde):**
-- **Falha de ambiente (36):** 17× `No module named 'cv2'`, 7× `yt_dlp`; as 12 falhas de asserção (`gamma`, `enable=`, capa 1x1, 6× `test_track`…) não tiveram a causa individual rastreada; **todas passaram** ao instalar as dependências que o `requirements.txt` já pede (hipótese forte: ausência de `cv2`). → `requirements-dev.txt` criado.
+- **Falha de ambiente (36):** 17× `No module named 'cv2'`, 7× `yt_dlp`; as 12 falhas de asserção foram **classificadas** (reexecução sem `cv2`): `test_grade` (gamma não aplicado), 5 de capa (`test_imagerecipe`, `test_modules_combined`, `test_multiformat`×2, `test_exemplo_completo`) e 6× `test_track` — todas por **`cv2` ausente**: `cover.py`, `grade.py` e `track.py` importam `cv2`; sem ele o app **degrada em silêncio** (sem capa, sem correção de gamma, sem rastreio) em vez de avisar → ver KI-10. → `requirements-dev.txt` criado.
 - **Falha real de código:** nenhuma encontrada.
 - **Não puderam ser executados (4):** 2× RNNoise e 2× detector de rosto exigem baixar arquivo de modelo (`modelo não baixado`, `detector de rosto não baixado`). São justamente componentes de ML da decisão A01.
 - **Não computo um total único** (1212 do dossiê): a soma das rodadas não foi deduplicada módulo a módulo; cada módulo passou ao menos uma vez com as dependências corretas.
