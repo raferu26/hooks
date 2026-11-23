@@ -136,6 +136,24 @@ with sync_playwright() as p:
         pg.keyboard.type('f'); pg.wait_for_timeout(150)
         check('foco_ignora_digitacao', pg.evaluate("!document.getElementById('studio').classList.contains('tl-folded')"))
         pg.evaluate("document.activeElement.blur()")
+    # snap magnético: arrastar um zoom até ~3 px da borda de outro alinha exatamente; Alt desliga
+    pg.evaluate("mutate(()=>{ST.proj.zooms=[{id:'za',start:2,end:4,zoom:1.12,curve:'smooth'},{id:'zb',start:6,end:8,zoom:1.12,curve:'smooth'}]})")
+    pg.wait_for_timeout(250)
+    def arrastar_zb(alt):
+        box = pg.evaluate("(()=>{const b=document.querySelector('.blk[data-kind=zoom][data-key=zb]').getBoundingClientRect();return [b.left+b.width/2,b.top+b.height/2,ST.pps]})()")
+        if alt: pg.keyboard.down('Alt')
+        pg.mouse.move(box[0], box[1]); pg.mouse.down()
+        pg.mouse.move(box[0] + (4 - 6) * box[2] + 3, box[1], steps=8); pg.mouse.up()
+        if alt: pg.keyboard.up('Alt')
+        pg.wait_for_timeout(250)
+        return pg.evaluate("ST.proj.zooms.find(z=>z.id==='zb').start")
+    sn_on = arrastar_zb(False)
+    check('snap_alinha_na_borda', sn_on == 4, sn_on)
+    pg.evaluate("mutate(()=>{ST.proj.zooms.find(z=>z.id==='zb').start=6;ST.proj.zooms.find(z=>z.id==='zb').end=8})"); pg.wait_for_timeout(250)
+    sn_off = arrastar_zb(True)
+    check('alt_desliga_snap', sn_off != 4 and abs(sn_off - 4) < .2, sn_off)
+    res['snap_resultados'] = [sn_on, sn_off]
+    pg.evaluate("mutate(()=>{ST.proj.zooms=[]})"); pg.wait_for_timeout(200)
     # seletor de qualidade
     modes = pg.evaluate("[...document.querySelectorAll('#stQuality option')].map(o=>o.value)")
     check('quatro_modos_no_exportar', modes == ['rapido', 'equilibrado', 'qualidade', 'entrega'], modes)

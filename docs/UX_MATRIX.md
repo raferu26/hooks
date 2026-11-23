@@ -7,7 +7,7 @@ Evidência = leitura do código (`ui/`) e e2e `ui/e2e10.py` (1440×900, Linux, m
 | P02 | Preview pequeno | **Parcial**: 15,6–17,2% da tela (era ~7%); +46% de área com a timeline recolhida (tecla F) | vídeo é limitado pela *altura*; e2e `video_pct_tela`, `foco_ganho_area_pct` | e2e | Reduzir altura fixa da barra/timeline; painéis laterais não aumentam o vídeo |
 | P03 | Prévia lenta | **Parcial**: prévia anterior continua; nova em ~11 s p/ 14,5 s; sem camadas | e2e `segundos_ate_previa_nova`=11 | e2e | Protótipo L1 (HTML imediato) sobre `timing_for` (A02) |
 | P04 | Salvar ≠ renderizar | **Resolvido** | Ctrl+S → `saveNow()`; autosave `learn=False` | `test_salvar_previa` (9), e2e | — |
-| P05 | 8 pistas | **Resolvido** em 3 + extras | e2e `tres_pistas`, `pista_zoom_aparece`, `todas_as_pistas` | e2e | Snap, ripple, arrasto sem redesenho (A03) |
+| P05 | 8 pistas | **Resolvido** em 3 + extras | e2e `tres_pistas`, `pista_zoom_aparece`, `todas_as_pistas` | e2e | Ripple e arrasto sem redesenho (snap já feito) |
 | P06 | Hierarquia visual | **Pendente** | sem tokens de design; tipografia 10–12 px | — | Design system (A05) |
 | P07 | Fluxo fragmentado | **Parcial** (`#stFlow` oculto <1180 px) | `style.css` 305 | e2e parcial | Revisar fluxo Importar→Editar→Conferir→Exportar |
 | P08 | Feedback de estado | **Resolvido** (Salvo/Salvando/…/Prévia anterior) | e2e `estado_nao_salvo`, `autosave_salvo`, `previa_marcada_anterior` | e2e | — |

@@ -12,10 +12,10 @@ Estado: ✔ feito e verificado · ◐ parcial · ○ pendente · ⛔ bloqueado (
 | 0 | Linha de base de testes e benchmarks | ◐ | suíte completa | `docs/BASELINE.md` |
 | 1 | Auditar P01–P10 / N1–N6 | ◐ | e2e | `docs/UX_MATRIX.md` |
 | 1 | Corrigir regressões confirmadas | ○ | matriz | ver `KNOWN_ISSUES.md` |
-| 2 | Painéis redimensionáveis, transcrição sob demanda (E5) | ○ | — | CSS/JS; testar 1024–1920 px |
+| 2 | Prévia maior: recolher timeline (F) ✔ · reduzir altura fixa em telas baixas ○ · painéis laterais (não aumentam o vídeo) | ◐ | — | e2e `foco_*` |
 | 2 | Design system: tokens, áreas clicáveis, contraste AA (E7) | ○ | — | baixo risco |
 | 2 | Reorganizar os 11 Ajustes (A06) | ○ | princípio "nada some" | mapa de migração |
-| 3 | Timeline: snap, ripple, arrasto sem redesenho total (E3/A03) | ◐ | benchmark N5 | `validacao/bench_ui.py` |
+| 3 | Timeline: snap ✔ (8 px, Alt desliga) · ripple ○ · arrasto sem redesenho total ○ (E3/A03) | ◐ | benchmark N5 | `validacao/bench_ui.py`, e2e `snap_*` |
 | 3 | Prévia em camadas (E8/A02) | ○ | protótipo; `timing_for` | alto risco; prototipar primeiro |
 | 3 | Atalhos: Ctrl+K, mapa único (E6/A04) | ◐ | — | |
 | 4 | Transições xfade, J/L cut (M02) | ○ | `plan.py`/`Remap` | |
