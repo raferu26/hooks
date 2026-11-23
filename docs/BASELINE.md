@@ -19,7 +19,7 @@
 
 ## 2. E2E do Estúdio (`ui/e2e10.py`, 1440×900)
 Todas as verificações passaram, sem erro de console. Medidas: abrir Estúdio **110–130 ms**; resposta ao zoom **67 ms**; prévia nova pronta em **11 s** (clipe de 14,5 s); barra superior 47,8 px (1 linha em 1440/1280/1024); 3 pistas por padrão; sem abas; "Sugestões" no lugar de "Agente".
-**Divergência com o documento recebido:** o vídeo ocupa **15,6%** da tela (337×~600 px), não 17,2%. Mantenho 15,6% como linha de base.
+**Nota:** o e2e mediu 15,6% (337 px de largura, com a faixa de prévia anterior visível); em repouso medi 354×629 = 17,2% (confere com o documento). A 1280×720 o vídeo é 233×414 (10,5%); a 1920×1080, 455×809 (17,8%).
 
 ## 3. Benchmark da timeline/undo (`validacao/bench_ui.py`; N cortes sintéticos, 30 `mutate()`, 10 desfazer)
 | Cortes | mutate p50 / p95 / máx (ms) | undo p50 / p95 (ms) | snapshot | DOM |

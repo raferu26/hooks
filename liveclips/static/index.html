@@ -363,6 +363,7 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
 @keyframes rslide{0%{left:-35%}100%{left:100%}}
 @media (prefers-reduced-motion:reduce){.rbar.indet>i{animation:none;left:0;width:100%!important;opacity:.45}.rbar>i{transition:none}}
 .rtask .ract{display:flex;gap:6px;flex-wrap:wrap}.rtask .ract button{padding:4px 9px;font-size:11.5px}
+#studio.tl-folded #tlWrap{display:none}
 
 </style></head>
 <body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -480,7 +481,7 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
   <section class="scol right" id="stRight" aria-label="Inspetor"></section>
  </div>
  <div class="tlzone">
-  <div class="tlbar"><span class="muted small">Linha do tempo</span><button id="tlOut" class="small quiet" aria-label="Afastar" title="Afastar (−)">－</button><button id="tlIn" class="small quiet" aria-label="Aproximar" title="Aproximar (+)">＋</button><button id="tlAll" class="small quiet" aria-pressed="false" title="Mostra também as pistas vazias de zoom, ritmo, imagens e títulos">Todas as pistas</button><span class="grow"></span><span id="selInfo" class="muted small">Arraste na régua para selecionar um trecho.</span></div>
+  <div class="tlbar"><span class="muted small">Linha do tempo</span><button id="tlOut" class="small quiet" aria-label="Afastar" title="Afastar (−)">－</button><button id="tlIn" class="small quiet" aria-label="Aproximar" title="Aproximar (+)">＋</button><button id="tlAll" class="small quiet" aria-pressed="false" title="Mostra também as pistas vazias de zoom, ritmo, imagens e títulos">Todas as pistas</button><button id="tlFold" class="small quiet" aria-pressed="false" title="Recolhe a linha do tempo para a prévia ficar maior (F)">Ampliar prévia</button><span class="grow"></span><span id="selInfo" class="muted small">Arraste na régua para selecionar um trecho.</span></div>
   <div class="tl-wrap" id="tlWrap"><div class="tl-heads" id="tlHeads"></div><div class="tl-scroll" id="tlScroll"><div class="tl" id="tl"></div></div></div>
  </div>
 </div>
@@ -808,14 +809,16 @@ async function renderMusicPage(){const box=$('musicPage');await loadMusic();box.
 const CAP_LABELS={auto:'Automático (segue o estilo)',dynamic:'Dinâmica',clean:'Limpa',bold:'Impactante',minimal:'Minimalista',impact:'Caixa alta animada',pop:'Entrada animada',box:'Faixa escura'};
 const TITLE_LABELS={big:'Grande',bar:'Faixa',top:'Topo'},POS_LABELS={top:'Topo',center:'Centro',bottom:'Base'},CURVES={smooth:'Suave',snap:'Seco',punch:'Impacto',ease:'Gradual',linear:'Linear'};
 const ST={open:false,id:'',data:null,proj:null,lines:[],linesEdited:false,overrides:{},start:0,end:0,sel:null,item:null,secs:new Set(),pps:0,fit:0,undo:[],redo:[],dirty:false,music:null,anchor:null,edit:-1,ending:false,videoKey:'',busy:false,raf:0,rev:0,savedRev:0,saving:false,saveErr:'',unlearned:false,saveTimer:0};
-const PREF={get autoPrev(){try{return localStorage.getItem('hk-autoprev')!=='0'}catch(e){return true}},set autoPrev(v){try{localStorage.setItem('hk-autoprev',v?'1':'0')}catch(e){}},get allTracks(){try{return localStorage.getItem('hk-alltracks')==='1'}catch(e){return false}},set allTracks(v){try{localStorage.setItem('hk-alltracks',v?'1':'0')}catch(e){}}};
+const PREF={get autoPrev(){try{return localStorage.getItem('hk-autoprev')!=='0'}catch(e){return true}},set autoPrev(v){try{localStorage.setItem('hk-autoprev',v?'1':'0')}catch(e){}},get foldTl(){try{return localStorage.getItem('hk-foldtl')==='1'}catch(e){return false}},set foldTl(v){try{localStorage.setItem('hk-foldtl',v?'1':'0')}catch(e){}},get allTracks(){try{return localStorage.getItem('hk-alltracks')==='1'}catch(e){return false}},set allTracks(v){try{localStorage.setItem('hk-alltracks',v?'1':'0')}catch(e){}}};
 const clone=o=>JSON.parse(JSON.stringify(o));
 const dur=()=>ST.data.duration;
 const uidc=p=>p+Math.random().toString(36).slice(2,8);
 
+function applyFold(){const f=PREF.foldTl;$('studio').classList.toggle('tl-folded',f);const b=$('tlFold');b.setAttribute('aria-pressed',f);b.textContent=f?'Mostrar linha do tempo':'Ampliar prévia';if(!f&&ST.open)fitTimeline()}
+function toggleFold(){PREF.foldTl=!PREF.foldTl;applyFold()}
 async function openStudio(id){
  try{const d=await api('/api/project/get',{id});clearTimeout(ST.saveTimer);Object.assign(ST,{plan:null,chat:null,open:true,id,data:d,proj:normProject(d.project),lines:clone(d.lines),linesEdited:d.lines_edited,overrides:{...d.overrides},start:d.start,end:d.end,sel:null,item:null,undo:[],redo:[],dirty:false,music:d.music,anchor:null,edit:-1,videoKey:'',rev:0,savedRev:0,saving:false,saveErr:'',unlearned:false});
- document.body.style.overflow='hidden';$('studio').classList.remove('hide');fillQuality(d);ST.pps=0;ST.cursor=0;fitTimeline();drawAll();drawFlow();ensurePreview();cancelAnimationFrame(ST.raf);loop()}catch(e){toast(e.message,true)}}
+ document.body.style.overflow='hidden';$('studio').classList.remove('hide');fillQuality(d);ST.pps=0;ST.cursor=0;fitTimeline();drawAll();applyFold();drawFlow();ensurePreview();cancelAnimationFrame(ST.raf);loop()}catch(e){toast(e.message,true)}}
 function fillQuality(d){const q=$('stQuality'),modes=d.catalog.quality_modes||[];q.innerHTML=modes.map(m=>`<option value="${m.id}" title="${esc(m.note)}">${esc(m.label)}</option>`).join('');q.value=d.profile.quality_mode||'equilibrado';q.title=(modes.find(m=>m.id===q.value)||{}).note||''}
 $('stQuality').onchange=()=>{const m=(ST.data.catalog.quality_modes||[]).find(x=>x.id===$('stQuality').value);$('stQuality').title=m?.note||'';if(m)toast(m.label+': '+m.note)};
 $('stStaleGo').onclick=()=>refreshPreview();
@@ -1156,7 +1159,7 @@ $('tlScroll').addEventListener('pointerdown',e=>{
  const move=ev=>{const t=clamp(T_(tlX(ev)),0,dur());if(Math.abs(t-t0)>.12){moved=true;ST.sel={a:r2(Math.min(t0,t)),b:r2(Math.max(t0,t))};ST.anchor=null;drawTimeline();drawLeft()}};
  const up=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);if(!moved){ST.item=null;seekClip(t0);drawRight();drawLeft();drawTimeline()}else{drawLeft();drawRight()}};
  document.addEventListener('pointermove',move);document.addEventListener('pointerup',up)});
-$('tlIn').onclick=()=>{ST.pps=Math.min(ST.pps*1.5,400);drawTimeline()};$('tlAll').onclick=()=>{PREF.allTracks=!PREF.allTracks;drawTimeline()};$('tlOut').onclick=()=>{ST.pps=Math.max(ST.fit,ST.pps/1.5);drawTimeline()};
+$('tlIn').onclick=()=>{ST.pps=Math.min(ST.pps*1.5,400);drawTimeline()};$('tlFold').onclick=toggleFold;$('tlAll').onclick=()=>{PREF.allTracks=!PREF.allTracks;drawTimeline()};$('tlOut').onclick=()=>{ST.pps=Math.max(ST.fit,ST.pps/1.5);drawTimeline()};
 window.addEventListener('resize',()=>{if(ST.open)fitTimeline()});
 
 /* ───── player ───── */
@@ -1222,7 +1225,7 @@ $('auditOk').onchange=()=>$('auditGo').disabled=!$('auditOk').checked;
 $('auditGo').onclick=async()=>{$('confirmDialog').close();try{await doApprove(true)}catch(e){toast(e.message,true)}};
 async function doApprove(ok){const q=$('stQuality').value;await api('/api/review',{id:ST.id,version:ST.data.version,start:ST.start,end:ST.end,action:'approve',editorial_confirmed:ok,edit_overrides:ST.overrides,quality_mode:q});toast('Exportação na fila ('+($('stQuality').selectedOptions[0]?.textContent||q)+'). Acompanhe em Cortes → Na fila.');ST.dirty=false;ST.unlearned=false;await nextOrClose()}
 let approveArmed=0;
-const SHORTCUTS=[['Espaço','reproduzir / pausar'],['← →','voltar / avançar 1 s (Shift: 5 s)'],['C','cortar o trecho selecionado'],['Delete','remover o item selecionado'],['Esc','limpar seleção'],['Ctrl+Z / Ctrl+Shift+Z','desfazer / refazer'],['Ctrl+S','salvar agora (salva sozinho também)'],['P','atualizar a prévia'],['[ ]','corte anterior / próximo'],['R','rejeitar'],['Ctrl+Enter (2×)','exportar'],['+ −','zoom da linha do tempo'],['?','mostrar estes atalhos']];
+const SHORTCUTS=[['Espaço','reproduzir / pausar'],['← →','voltar / avançar 1 s (Shift: 5 s)'],['C','cortar o trecho selecionado'],['Delete','remover o item selecionado'],['Esc','limpar seleção'],['Ctrl+Z / Ctrl+Shift+Z','desfazer / refazer'],['Ctrl+S','salvar agora (salva sozinho também)'],['P','atualizar a prévia'],['F','recolher/mostrar a linha do tempo (prévia maior)'],['[ ]','corte anterior / próximo'],['R','rejeitar'],['Ctrl+Enter (2×)','exportar'],['+ −','zoom da linha do tempo'],['?','mostrar estes atalhos']];
 function showKeys(){const d=$('keysDialog');$('keysList').innerHTML=SHORTCUTS.map(([k,v])=>`<div class="row"><kbd>${k}</kbd><span class="grow">${v}</span></div>`).join('');d.showModal()}
 document.addEventListener('keydown',e=>{if(!ST.open||document.querySelector('dialog[open]'))return;const tag=(e.target.tagName||'');const typing=['INPUT','TEXTAREA','SELECT'].includes(tag);const mod=e.ctrlKey||e.metaKey;
  if(mod&&e.key.toLowerCase()==='z'){if(typing)return;e.preventDefault();e.shiftKey?redo():undo();return}
@@ -1235,6 +1238,7 @@ document.addEventListener('keydown',e=>{if(!ST.open||document.querySelector('dia
  if(k==='['){e.preventDefault();goClip(-1);return}
  if(k.toLowerCase()==='r'){e.preventDefault();$('stReject').click();return}
  if(k.toLowerCase()==='p'){e.preventDefault();refreshPreview();return}
+ if(k.toLowerCase()==='f'){e.preventDefault();toggleFold();return}
  if(k==='?'){e.preventDefault();showKeys();return}
  if(k===' '){e.preventDefault();$('stPlay').click();return}
  if(k==='ArrowLeft'||k==='ArrowRight'){e.preventDefault();const step=(e.shiftKey?5:1)*(k==='ArrowLeft'?-1:1);seekClip(clamp(curClip()+step,0,dur()));return}

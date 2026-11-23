@@ -4,7 +4,7 @@ Evidência = leitura do código (`ui/`) e e2e `ui/e2e10.py` (1440×900, Linux, m
 | ID | PROBLEMA | ESTADO ATUAL | EVIDÊNCIA | TESTE | PRÓXIMA AÇÃO |
 |---|---|---|---|---|---|
 | P01 | 8 abas | **Resolvido** (inspetor + seções recolhíveis) | e2e `sem_abas`, `secoes`; sem `role=tab` no `#stRight` | e2e | Revisar nomes/ordem das 9 seções com pessoas |
-| P02 | Preview pequeno | **Parcial**: 15,6% da tela (era ~7%) | e2e `video_pct_tela`=15.6; `.smain` com colunas fixas (`style.css` 186) | e2e (>12%) | Painéis redimensionáveis/recolhíveis, transcrição sob demanda (E5) |
+| P02 | Preview pequeno | **Parcial**: 15,6–17,2% da tela (era ~7%); +46% de área com a timeline recolhida (tecla F) | vídeo é limitado pela *altura*; e2e `video_pct_tela`, `foco_ganho_area_pct` | e2e | Reduzir altura fixa da barra/timeline; painéis laterais não aumentam o vídeo |
 | P03 | Prévia lenta | **Parcial**: prévia anterior continua; nova em ~11 s p/ 14,5 s; sem camadas | e2e `segundos_ate_previa_nova`=11 | e2e | Protótipo L1 (HTML imediato) sobre `timing_for` (A02) |
 | P04 | Salvar ≠ renderizar | **Resolvido** | Ctrl+S → `saveNow()`; autosave `learn=False` | `test_salvar_previa` (9), e2e | — |
 | P05 | 8 pistas | **Resolvido** em 3 + extras | e2e `tres_pistas`, `pista_zoom_aparece`, `todas_as_pistas` | e2e | Snap, ripple, arrasto sem redesenho (A03) |
