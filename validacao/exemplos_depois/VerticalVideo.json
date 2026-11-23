@@ -1,0 +1,10 @@
+{
+  "canto_tl": 1.0,
+  "canto_tr": 1.0,
+  "canto_bl": 1.0,
+  "canto_br": 1.0,
+  "centro": {
+    "aspecto": 1.0,
+    "largura_px": 144.0
+  }
+}

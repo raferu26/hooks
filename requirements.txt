@@ -1,0 +1,6 @@
+faster-whisper==1.2.1
+streamlink==8.6.3
+opencv-contrib-python==4.10.0.84
+mediapipe==0.10.21
+yt-dlp[default]>=2026.10.26
+cryptography>=42

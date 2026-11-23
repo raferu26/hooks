@@ -1,0 +1,24 @@
+{
+  "duracao": {
+    "esperada": 32.0,
+    "obtida": 32.0
+  },
+  "apos_velocidade": {
+    "laranja": [
+      23.0,
+      23.0
+    ],
+    "voz": [
+      28.02,
+      28.0
+    ],
+    "legenda": 28.0
+  },
+  "dessincronia_s": 0.019999999999999574,
+  "zoom": {
+    "dentro": 115.0,
+    "fora": 106.0,
+    "razao": 1.0849056603773586
+  },
+  "rosto_na_camera_pequena": 1.0
+}

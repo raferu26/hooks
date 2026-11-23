@@ -1,0 +1,11 @@
+{
+  "server_url": "https://conta.seudominio.com",
+  "public_keys": {
+    "COLE_AQUI_O_KID": "COLE_AQUI_A_CHAVE_PUBLICA_BASE64"
+  },
+  "enforce": true,
+  "terms_url": "https://conta.seudominio.com/termos",
+  "privacy_url": "https://conta.seudominio.com/privacidade",
+  "support_url": "mailto:suporte@seudominio.com",
+  "portal_url": "https://conta.seudominio.com/conta"
+}

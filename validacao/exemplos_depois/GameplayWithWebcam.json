@@ -1,0 +1,65 @@
+{
+  "duracao_s": 28.9,
+  "janela_fonte": [
+    5.0,
+    38.0
+  ],
+  "reacao_laranja_s": 3.033333333333333,
+  "clarao_s": 11.866666666666667,
+  "bipe_s": 11.87,
+  "dessincronia_s": 0.003333333333332078,
+  "legenda_menos_voz_s": [
+    -0.02,
+    -0.02,
+    -0.02,
+    -0.02
+  ],
+  "rosto": {
+    "aspecto": 0.9900990099009901,
+    "largura_px": 200.0
+  },
+  "rosto_pior_quadro": {
+    "fracao": 0.9711792961474365,
+    "quadros_abaixo": 0,
+    "de": null,
+    "ate": null
+  },
+  "movimento": {
+    "passo_mediano_px": 29.0,
+    "passos_parados": 0.0011655011655011655
+  },
+  "legenda_px": {
+    "esquerda": 356,
+    "direita": 774,
+    "base": 1394
+  },
+  "volume": {
+    "lufs": -16.0,
+    "pico_dbtp": -4.88,
+    "blocos_db": [
+      -20.4,
+      -12.3,
+      -16.1,
+      -16.0
+    ],
+    "diferenca_db": 8.134469788435172
+  },
+  "decisoes": {
+    "silence": 3
+  },
+  "previa": {
+    "rascunho_s": 28.9,
+    "final_s": 28.9
+  },
+  "previa_diferenca": [
+    5.691319444444445,
+    2.0752854938271605,
+    3.038616898148148,
+    0.07034529320987655,
+    2.454033564814815
+  ],
+  "qc": {
+    "nivel": "atencao",
+    "resumo": "0 problema(s) e 1 aviso(s): Imagem parada."
+  }
+}

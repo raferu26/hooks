@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hook’s · Minha conta</title>
+<style>
+:root{color-scheme:dark;--bg:#0e0e11;--panel:#17171c;--panel2:#1e1f26;--raised:#262731;--line:#2a2b35;--line2:#3b3d4b;--ink:#ededf2;--muted:#9a9cab;--faint:#6b6d7c;
+--accent:#ff4d8d;--accent-ink:#1a050e;--aqua:#2ee6d6;--amber:#f5b83d;--good:#4cd08a;--bad:#ff7a5c;--info:#6cb4ff;font-synthesis:none}
+*{box-sizing:border-box}html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line2);border-radius:8px;background:var(--panel2);padding:8px 15px;line-height:1.2}
+button:hover:not(:disabled){background:var(--raised)}button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+button.danger{color:#ff9b82}button.quiet{background:transparent;border-color:transparent;color:var(--muted)}button.small{padding:5px 10px;font-size:13px}
+a{color:var(--aqua)}:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+input,select,textarea{background:#0c0c0f;border:1px solid var(--line2);border-radius:8px;padding:9px 11px;width:100%;min-width:0}
+label{display:block;font-size:13px;color:var(--muted);margin:0 0 4px}
+h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.015em}h1{font-size:24px}h2{font-size:17px}h3{font-size:14px;color:var(--muted);font-weight:600}
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;border-bottom:1px solid var(--line);background:var(--panel)}
+.top .brand{font-weight:800;font-size:18px}.top .brand b{color:var(--accent)}
+.wrap{max-width:980px;margin:0 auto;padding:26px 24px 70px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:22px;flex-wrap:wrap}
+.tabs button{border:0;border-radius:8px 8px 0 0;background:transparent;color:var(--muted);padding:10px 16px}
+.tabs button[aria-selected=true]{color:var(--ink);box-shadow:inset 0 -2px var(--accent);background:var(--panel2)}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:16px}
+.notice{border:1px solid var(--line2);border-left:3px solid var(--amber);background:#f5b83d12;border-radius:8px;padding:11px 15px;margin-bottom:14px}
+.notice.bad{border-left-color:var(--bad);background:#ff7a5c12}.notice.good{border-left-color:var(--good);background:#4cd08a12}.notice.info{border-left-color:var(--info);background:#6cb4ff12}
+.badge{display:inline-block;padding:1px 10px;border-radius:99px;font-size:12.5px;font-weight:600;border:1px solid}
+.b-ativa,.b-pago{color:var(--good);border-color:#4cd08a55;background:#4cd08a14}.b-teste{color:var(--info);border-color:#6cb4ff55;background:#6cb4ff14}
+.b-atraso,.b-pendente{color:var(--amber);border-color:#f5b83d55;background:#f5b83d14}.b-suspensa,.b-expirada,.b-atrasado{color:var(--bad);border-color:#ff7a5c55;background:#ff7a5c14}
+.b-cancelada,.b-estornado,.b-cancelado{color:var(--muted);border-color:var(--line2)}
+.bar{height:8px;border-radius:4px;background:var(--raised);overflow:hidden}.bar i{display:block;height:100%;background:var(--aqua)}.bar.warn i{background:var(--amber)}.bar.full i{background:var(--bad)}
+.usage{margin:14px 0}.usage .t{display:flex;justify-content:space-between;margin-bottom:5px}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.plan{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:10px}
+.plan.cur{border-color:var(--accent)}.plan .price{font-size:28px;font-weight:700;letter-spacing:-.02em}.plan ul{margin:0;padding-left:18px;color:var(--muted)}.plan .go{margin-top:auto}
+table{width:100%;border-collapse:collapse}th{text-align:left;font-size:12.5px;color:var(--faint);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.grow{flex:1}.muted{color:var(--muted)}.faint{color:var(--faint)}.small{font-size:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.auth{max-width:420px;margin:9vh auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:30px}.auth .fields{display:grid;gap:14px;margin-top:20px}
+.auth .sw{margin-top:16px;text-align:center;font-size:14px;color:var(--muted)}.auth .sw a{cursor:pointer}
+.check{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--muted)}.check input{width:auto;margin-top:4px}
+pre{white-space:pre-wrap;background:#0c0c0f;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px;overflow:auto}
+dialog{background:var(--panel);color:var(--ink);border:1px solid var(--line2);border-radius:12px;padding:0;width:min(520px,94vw)}dialog::backdrop{background:#000a}dialog form{padding:22px}dialog h2{margin-bottom:12px}dialog .fields{display:grid;gap:12px}dialog .foot{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.toast{position:fixed;right:20px;bottom:20px;background:var(--raised);border:1px solid var(--line2);border-radius:10px;padding:12px 17px;max-width:420px;z-index:9}.toast.error{border-color:var(--bad)}.toast.hide{display:none}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}.wrap{padding:18px 14px 60px}.top{padding:12px 14px}}
+</style></head><body>
+<div id="app"></div><div id="toast" class="toast hide" role="status"></div>
+<script>
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let csrf='',me=null,tab='resumo',mode='login',plans=[];
+const brl=c=>'R$ '+((c||0)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const dt=(t,time=false)=>t?new Date(t*1000).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',year:'numeric',...(time?{hour:'2-digit',minute:'2-digit'}:{})}):'—';
+const STATE={teste:'Período de teste',ativa:'Ativa',atraso:'Pagamento em atraso',cancelada:'Cancelada',suspensa:'Suspensa',expirada:'Vencida'};
+const badge=(s,t)=>`<span class="badge b-${esc(s)}">${esc(t||STATE[s]||s)}</span>`;
+const bar=(used,lim)=>{const p=lim?Math.min(100,Math.round(used/lim*100)):0;return `<div class="bar ${p>=100?'full':p>=80?'warn':''}" role="progressbar" aria-valuenow="${p}" aria-valuemin="0" aria-valuemax="100"><i style="width:${p}%"></i></div>`};
+const fmt=(n,d=1)=>Number(n).toLocaleString('pt-BR',{maximumFractionDigits:d});
+function toast(m,err=false){const t=$('toast');t.textContent=m;t.className='toast'+(err?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.add('hide'),6500)}
+async function api(path,data){const r=await fetch('/v1/portal'+path,{method:data!==undefined?'POST':'GET',headers:{'Content-Type':'application/json',...(csrf?{'X-CSRF':csrf}:{})},body:data!==undefined?JSON.stringify(data):undefined});let v={};try{v=await r.json()}catch(e){}
+ if(r.status===401&&v.code==='nao_autorizado'&&me){me=null;csrf='';draw();throw Error('Sua sessão terminou. Entre de novo.')}
+ if(!r.ok){const e=Error(v.error||'Não foi possível concluir.');e.code=v.code;throw e}return v}
+async function run(fn,ok){try{const v=await fn();if(ok)toast(ok);return v}catch(e){toast(e.message,true);throw e}}
+function ask(title,fields,submit='Salvar',danger=false){return new Promise(res=>{const d=document.createElement('dialog');
+ d.innerHTML=`<form method="dialog"><h2>${esc(title)}</h2><div class="fields">${fields.map(f=>f.type==='note'?`<div class="small muted">${f.html}</div>`:`<div><label for="f_${f.name}">${esc(f.label)}</label><input id="f_${f.name}" type="${f.type||'text'}" value="${esc(f.value||'')}" ${f.required?'required':''} autocomplete="off"></div>`).join('')}</div><div class="foot"><button type="button" data-x>Voltar</button><button class="${danger?'danger':'primary'}" value="ok">${esc(submit)}</button></div></form>`;
+ document.body.appendChild(d);d.querySelector('[data-x]').onclick=()=>d.close('x');d.addEventListener('close',()=>{const o={};if(d.returnValue==='ok')for(const f of fields)if(f.type!=='note')o[f.name]=d.querySelector('#f_'+f.name).value;res(d.returnValue==='ok'?o:null);d.remove()});d.showModal();d.querySelector('input')?.focus()})}
+
+/* ───── entrada ───── */
+const resetToken=()=>(location.hash.match(/reset=([^&]+)/)||[])[1]||'';
+function authView(){
+ if(resetToken())return `<form class="auth" id="resetForm"><h1>Criar nova senha</h1><p class="muted small">Escolha uma senha com pelo menos 10 caracteres.</p><div class="fields"><div><label for="np">Nova senha</label><input id="np" type="password" required minlength="10" autocomplete="new-password"></div><button class="primary" type="submit">Salvar senha</button></div></form>`;
+ if(mode==='forgot')return `<form class="auth" id="forgotForm"><h1>Esqueci a senha</h1><p class="muted small">Informe seu e-mail. Se ele estiver cadastrado, enviamos um link válido por 1 hora.</p><div class="fields"><div><label for="fe">E-mail</label><input id="fe" type="email" required autocomplete="username"></div><button class="primary" type="submit">Enviar link</button></div><div class="sw"><a data-mode="login" role="link" tabindex="0">Voltar para o login</a></div></form>`;
+ if(mode==='register')return `<form class="auth" id="regForm"><h1>Criar conta</h1><p class="muted small">Teste grátis, sem cartão. Você usa o Hook’s no seu computador e gerencia a assinatura aqui.</p><div class="fields"><div><label for="rn">Nome</label><input id="rn" required autocomplete="name"></div><div><label for="re">E-mail</label><input id="re" type="email" required autocomplete="username"></div><div><label for="rp">Senha (mínimo 10 caracteres)</label><input id="rp" type="password" required minlength="10" autocomplete="new-password"></div><label class="check"><input type="checkbox" id="rt" required><span>Li e aceito os <a href="/termos" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.</span></label><button class="primary" type="submit">Começar o teste</button></div><div class="sw">Já tem conta? <a data-mode="login" role="link" tabindex="0">Entrar</a></div></form>`;
+ return `<form class="auth" id="loginForm"><h1>Hook’s <span style="color:var(--accent)">·</span> Minha conta</h1><p class="muted small">Entre para ver seu plano, uso e pagamentos.</p><div class="fields"><div><label for="le">E-mail</label><input id="le" type="email" required autocomplete="username"></div><div><label for="lp">Senha</label><input id="lp" type="password" required autocomplete="current-password"></div><button class="primary" type="submit">Entrar</button></div><div class="sw"><a data-mode="forgot" role="link" tabindex="0">Esqueci a senha</a> · <a data-mode="register" role="link" tabindex="0">Criar conta</a></div></form>`}
+document.addEventListener('click',e=>{const m=e.target.closest('[data-mode]');if(m){mode=m.dataset.mode;draw()}});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches?.('[data-mode]'))e.target.click()});
+document.addEventListener('submit',async e=>{const id=e.target.id;if(!['loginForm','regForm','forgotForm','resetForm'].includes(id))return;e.preventDefault();
+ try{if(id==='loginForm'){const v=await api('/login',{email:$('le').value,password:$('lp').value});csrf=v.csrf;me=null;tab='resumo';await draw()}
+ else if(id==='regForm'){const email=$('re').value,pw=$('rp').value;await api('/register',{name:$('rn').value,email,password:pw,accept_terms:$('rt').checked});const v=await api('/login',{email,password:pw});csrf=v.csrf;me=null;tab='resumo';await draw();toast('Conta criada. Instale o programa e entre com este e-mail e esta senha.')}
+ else if(id==='forgotForm'){await api('/forgot',{email:$('fe').value});toast('Se o e-mail estiver cadastrado, o link chega em instantes.');mode='login';draw()}
+ else{await api('/reset',{token:resetToken(),password:$('np').value});history.replaceState(null,'',location.pathname);toast('Senha alterada. Entre com a nova senha.');mode='login';draw()}}
+ catch(err){toast(err.message,true)}});
+
+/* ───── área logada ───── */
+const TABS=[['resumo','Resumo'],['planos','Planos'],['computadores','Computadores'],['pagamentos','Pagamentos'],['dados','Meus dados']];
+async function load(){me=await api('/me');csrf=me.csrf||csrf;plans=me.planos||[]}
+async function draw(){
+ if(resetToken()){$('app').innerHTML=authView();return}
+ try{await load()}catch(e){me=null;$('app').innerHTML=authView();return}
+ $('app').innerHTML=`<div class="top"><span class="brand">Hook’s <b>·</b> <span class="muted" style="font-weight:500">Minha conta</span></span><span class="row"><span class="muted small">${esc(me.conta.email)}</span><button class="small quiet" id="out">Sair</button></span></div><div class="wrap"><div class="tabs" role="tablist">${TABS.map(([id,t])=>`<button role="tab" aria-selected="${id===tab}" data-tab="${id}">${t}</button>`).join('')}</div><div id="pane"></div></div>`;
+ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab;draw()});
+ $('out').onclick=async()=>{await api('/logout',{}).catch(()=>{});me=null;csrf='';draw()};
+ try{PANES[tab]()}catch(e){$('pane').innerHTML=`<div class="notice bad">${esc(e.message)}</div>`}}
+const planOf=code=>plans.find(p=>p.code===code);
+
+const PANES={
+resumo(){const s=me.assinatura,p=planOf(s.plan),lim=s.limits,use=s.usage;
+ const kind=s.state==='ativa'||s.state==='teste'?'good':s.state==='atraso'?'':'bad',pagou=['ativa','atraso'].includes(s.state);
+ $('pane').innerHTML=`<div class="notice ${kind}">${esc(s.message)}</div>
+ <div class="grid2"><div class="box"><h3>Plano</h3><h2 style="margin:6px 0 4px">${esc(s.plan_name)} ${badge(s.state)}</h2><p class="muted small" style="margin:0">${p&&p.price_cents?brl(p.price_cents)+' por mês · ':''}${s.state==='teste'?'o teste termina':'período até'} ${dt(s.period[1])}</p>${s.cancel_at_period_end?'<p class="small" style="color:var(--amber);margin:8px 0 0">A assinatura termina no fim do período e não renova.</p>':''}<div class="row" style="margin-top:14px"><button class="primary" id="goPlans">${pagou?'Mudar de plano':'Assinar'}</button>${s.state==='ativa'&&!s.cancel_at_period_end?'<button class="danger" id="cancelBtn">Cancelar assinatura</button>':''}</div></div>
+ <div class="box"><h3>Uso neste período</h3><div class="usage"><div class="t"><span>Horas de live analisadas</span><span class="muted">${fmt(use.horas)} de ${fmt(lim.horas,0)}</span></div>${bar(use.horas,lim.horas)}</div><div class="usage"><div class="t"><span>Clipes exportados</span><span class="muted">${fmt(use.clipes,0)} de ${fmt(lim.clipes,0)}</span></div>${bar(use.clipes,lim.clipes)}</div><p class="small muted" style="margin:10px 0 0">Até ${lim.lives} live(s) ao mesmo tempo · ${lim.canais} canal(is) · ${lim.dispositivos} computador(es). O uso zera quando o período renova (${dt(s.period[1])}).</p></div></div>
+ ${me.pendentes.map(x=>`<div class="box"><h3>Pagamento pendente</h3><p style="margin:6px 0 4px"><b>${brl(x.amount_cents)}</b> · plano ${esc(planOf(x.plan_code)?.name||x.plan_code)} · código <b>${esc(x.id.slice(0,8).toUpperCase())}</b></p><p class="muted small" style="margin:0">${esc(x.instrucoes)}</p></div>`).join('')}
+ <div class="box"><h3>Como usar</h3><ol class="muted" style="margin:8px 0 0;padding-left:20px"><li>Baixe e instale o Hook’s no computador onde você vai clipar${me.download?` (<a href="${esc(me.download)}" target="_blank" rel="noopener">baixar</a>)`:''}.</li><li>Em <b>Assinatura</b>, entre com <b>${esc(me.conta.email)}</b> e a sua senha.</li><li>O programa confere a licença pela internet de tempos em tempos e segue funcionando sem conexão por alguns dias.</li></ol>${me.suporte?`<p class="small muted" style="margin:12px 0 0">Dúvidas: <a href="mailto:${esc(me.suporte)}">${esc(me.suporte)}</a></p>`:''}</div>`;
+ $('goPlans').onclick=()=>{tab='planos';draw()};
+ if($('cancelBtn'))$('cancelBtn').onclick=async()=>{const v=await ask('Cancelar assinatura',[{type:'note',html:`Você continua com acesso até <b>${dt(s.period[1])}</b>. Depois disso o programa deixa de analisar novas lives. Os clipes já exportados continuam no seu computador.`}],'Cancelar assinatura',true);if(v)run(()=>api('/cancel',{}),'Assinatura cancelada. O acesso segue até o fim do período.').then(draw).catch(()=>{})}},
+
+planos(){const s=me.assinatura,pagou=['ativa','atraso'].includes(s.state);
+ $('pane').innerHTML=`${me.provedor==='manual'?'<div class="notice info">O pagamento é por Pix. Depois de escolher o plano você recebe a chave e um código; assim que conferirmos o pagamento a assinatura é liberada.</div>':''}<div class="plans">${plans.map(p=>`<div class="plan ${p.code===s.plan?'cur':''}"><h2>${esc(p.name)}</h2><div class="price">${brl(p.price_cents)}<span class="muted small" style="font-weight:400"> /mês</span></div><p class="muted small" style="margin:0">${esc(p.description||'')}</p><ul><li>${p.max_lives} live(s) ao mesmo tempo</li><li>${fmt(p.hours_month,0)} h de live por mês</li><li>${p.clips_month} clipes exportados por mês</li><li>${p.max_streamers} canal(is)</li><li>${p.max_devices} computador(es)</li></ul><div class="go">${p.code===s.plan&&pagou?'<span class="badge b-ativa">Plano atual</span>':`<button class="primary" data-buy="${p.code}">${pagou?'Mudar para este':'Assinar'}</button>`}</div></div>`).join('')||'<div class="notice">Os planos ainda não estão à venda. Fale com o suporte'+(me.suporte?' em '+esc(me.suporte):'')+'.</div>'}</div><div id="buyOut"></div>`;
+ document.querySelectorAll('[data-buy]').forEach(b=>b.onclick=async()=>{
+  if(me.provedor==='asaas'&&!me.conta.doc){const x=await ask('Dados para a cobrança',[{name:'doc',label:'CPF ou CNPJ',required:true},{type:'note',html:'Você paga pelo link que o provedor gerar (Pix, boleto ou cartão).'}],'Continuar');if(!x)return;try{await api('/profile',{doc:x.doc});me.conta.doc=x.doc}catch(e){toast(e.message,true);return}}
+  const r=await run(()=>api('/checkout',{plan:b.dataset.buy})).catch(()=>null);if(!r)return;
+  if(r.tipo==='asaas'){if(r.link){window.open(r.link,'_blank','noopener');toast('Abrimos a página de pagamento em outra aba.')}else toast('Assinatura criada. O link de pagamento chega por e-mail.');await load();return}
+  $('buyOut').innerHTML=`<div class="box" style="margin-top:18px"><h2>Falta só o pagamento</h2><p style="margin:10px 0 4px">Valor: <b>${esc(r.valor)}</b> · código <b style="font-size:17px;letter-spacing:.05em">${esc(r.codigo)}</b></p><p class="muted" style="margin:0">${esc(r.instrucoes)}</p></div>`;$('buyOut').scrollIntoView({behavior:'smooth'})})},
+
+computadores(){const list=me.dispositivos,lim=me.assinatura.limits.dispositivos;
+ $('pane').innerHTML=`<div class="box"><h2>Seus computadores</h2><p class="muted small">Seu plano permite ${lim} computador(es). Se trocar de máquina, remova a antiga aqui para liberar a vaga.</p><table><tbody>${list.map(d=>`<tr><td><b>${esc(d.name||'Computador')}</b><br><span class="small muted">${esc(d.os||'')} · versão ${esc(d.app_version||'')} · visto ${dt(d.last_seen,true)}</span></td><td style="text-align:right">${d.revoked?'<span class="badge b-cancelada">removido</span>':`<button class="small danger" data-dev="${d.id}">Remover</button>`}</td></tr>`).join('')||'<tr><td class="muted">Nenhum computador ativado ainda. Instale o programa e entre com sua conta.</td></tr>'}</tbody></table></div>`;
+ document.querySelectorAll('[data-dev]').forEach(b=>b.onclick=()=>{if(confirm('Remover este computador? O programa nele volta a pedir login.'))run(()=>api('/device/revoke',{id:b.dataset.dev}),'Computador removido.').then(draw).catch(()=>{})})},
+
+pagamentos(){
+ $('pane').innerHTML=`<div class="box"><h2>Pagamentos</h2><table><thead><tr><th>Data</th><th>Plano</th><th>Valor</th><th>Forma</th><th>Estado</th><th>Período</th></tr></thead><tbody>${me.pagamentos.map(p=>`<tr><td>${dt(p.paid_at||p.created)}</td><td>${esc(planOf(p.plan_code)?.name||p.plan_code)}</td><td>${brl(p.amount_cents)}</td><td>${esc(p.method||p.provider)}</td><td>${badge(p.status)}</td><td class="muted small">${p.period_start?dt(p.period_start)+' a '+dt(p.period_end):'—'}</td></tr>`).join('')||'<tr><td colspan="6" class="muted">Nenhum pagamento ainda.</td></tr>'}</tbody></table><p class="small faint" style="margin:12px 0 0">Precisa de nota fiscal? Peça por e-mail ao suporte informando o CPF ou CNPJ.</p></div>`},
+
+dados(){const c=me.conta,open=me.pedidos.filter(p=>p.status==='aberta');
+ $('pane').innerHTML=`<div class="grid2"><div class="box"><h2>Perfil</h2><div style="display:grid;gap:12px;margin-top:12px"><div><label for="pn">Nome</label><input id="pn" value="${esc(c.nome)}"></div><div><label for="pt">Telefone (opcional)</label><input id="pt" value="${esc(c.telefone||'')}"></div><div><label for="pd">CPF ou CNPJ (para a nota fiscal)</label><input id="pd" value="${esc(c.doc||'')}"></div><button class="primary" id="saveProf">Salvar</button></div></div>
+ <div class="box"><h2>Senha</h2><div style="display:grid;gap:12px;margin-top:12px"><div><label for="po">Senha atual</label><input id="po" type="password" autocomplete="current-password"></div><div><label for="pnw">Nova senha (mínimo 10 caracteres)</label><input id="pnw" type="password" autocomplete="new-password"></div><button id="savePw">Trocar senha</button></div></div></div>
+ <div class="box"><h2>Seus dados e a LGPD</h2><p class="muted small">Você pode baixar uma cópia dos seus dados ou pedir a exclusão da conta. A exclusão apaga seu uso e seus computadores e remove nome, e-mail e documento; os registros de pagamento ficam sem dados pessoais diretos, pelo prazo que a lei fiscal exige. Termos aceitos: versão ${esc(c.termos||'—')} em ${dt(c.termos_em)}. <a href="/termos" target="_blank" rel="noopener">Termos</a> · <a href="/privacidade" target="_blank" rel="noopener">Privacidade</a></p>${open.length?`<div class="notice info">Pedido em andamento: ${open.map(p=>esc(p.kind)+' (prazo '+dt(p.due_at)+')').join('; ')}.</div>`:''}<div class="row"><button id="exp">Baixar meus dados</button><button class="danger" id="delReq">Pedir exclusão da conta</button></div></div>`;
+ $('saveProf').onclick=()=>run(()=>api('/profile',{name:$('pn').value,phone:$('pt').value,doc:$('pd').value}),'Dados salvos.').then(draw).catch(()=>{});
+ $('savePw').onclick=()=>run(()=>api('/password',{old:$('po').value,new:$('pnw').value}),'Senha trocada.').then(()=>{$('po').value='';$('pnw').value=''}).catch(()=>{});
+ $('exp').onclick=async()=>{const v=await run(()=>api('/export'));const b=new Blob([JSON.stringify(v,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='meus-dados-hooks.json';a.click()};
+ $('delReq').onclick=async()=>{const x=await ask('Excluir minha conta',[{type:'note',html:'Registramos o pedido e a equipe conclui em até 15 dias. Se houver assinatura ativa, cancele antes pela aba Resumo.'}],'Pedir exclusão',true);if(x)run(()=>api('/privacy',{kind:'exclusao'}),'Pedido registrado. Você receberá a confirmação por e-mail.').then(draw).catch(()=>{})}}};
+draw();
+</script></body></html>
