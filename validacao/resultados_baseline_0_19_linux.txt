@@ -1,0 +1,30 @@
+{
+ "rapido": {
+  "segundos": 5.7,
+  "kbps": 86406,
+  "ssim": 0.853322,
+  "psnr": "33.758231",
+  "args": "-c:v libx264 -preset veryfast -crf 21"
+ },
+ "equilibrado": {
+  "segundos": 21.8,
+  "kbps": 163980,
+  "ssim": 0.950762,
+  "psnr": "38.227810",
+  "args": "-c:v libx264 -preset medium -crf 18"
+ },
+ "qualidade": {
+  "segundos": 62.9,
+  "kbps": 210365,
+  "ssim": 0.97536,
+  "psnr": "40.800150",
+  "args": "-c:v libx264 -preset slow -crf 16 -x264-params aq-mode=3"
+ },
+ "entrega": {
+  "segundos": 100.4,
+  "kbps": 228943,
+  "ssim": 0.981183,
+  "psnr": "42.011382",
+  "args": "-c:v libx264 -preset slower -crf 15 -x264-params aq-mode=3"
+ }
+}

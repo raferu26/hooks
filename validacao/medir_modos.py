@@ -1,5 +1,6 @@
-import subprocess,time,re,sys,json
-sys.path.insert(0,__import__('os').path.join(__import__('os').path.dirname(__file__),'..'))
+import subprocess,time,re,sys,json,os,tempfile
+os.chdir(tempfile.mkdtemp(prefix='hooks_modos_'))   # arquivos de saída ficam fora do repositório
+sys.path.insert(0,os.path.join(os.path.dirname(os.path.abspath(__file__)),'..'))
 from liveclips import hardware
 src='src.mp4'
 # fonte com movimento, ruído e degradê (sintética: não substitui clipe real)

@@ -1,0 +1,5 @@
+# Ambiente de testes (além de requirements.txt). Sem isto, ~36 testes falham/ficam ignorados por falta de pacote.
+-r requirements.txt
+opentimelineio
+pyflakes
+playwright   # e2e da interface; usa /usr/bin/google-chrome
