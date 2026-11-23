@@ -7,7 +7,7 @@ Dono: Rafael ("Rafa"). Responder em PT-BR, direto, resposta primeiro.
 Editor desktop **local-first** de vídeos/lives: sugere cortes verticais 9:16, edição no Estúdio, exporta. Assinatura planejada; **todo processamento de vídeo no PC do cliente**.
 
 ## Decisões aprovadas (não reverter sem pedir)
-1. **Sem dependência de IA.** Não adicionar modelos, APIs de IA, LLM ou nuvem de IA. Whisper, MediaPipe, RNNoise e Ollama existem só como **opcionais**; `ai_mode='sem_ia'` tem que continuar funcionando (`tests/test_noai_mode.py`). Não remover esses recursos sem aprovação: ver `docs/AI_DEPENDENCIES.md`.
+1. **100% SEM IA — decisão arquitetural inegociável e permanente (23/11/2026).** A versão comercial final não usa APIs de IA, LLM, serviços de inferência **nem modelos pré-treinados, mesmo offline** (inclui Whisper, MediaPipe, RNNoise neural, Ollama e, por interpretação estrita a confirmar, cascatas Haar). Proibido: nova dependência de IA, download silencioso de modelo, afirmar equivalência que algoritmo convencional não tem. Permitido e preferido: DSP/FFmpeg, visão clássica sem treino (diferença de quadros, fluxo óptico, bordas), heurísticas configuráveis, interação manual inteligente. **Migração progressiva em fases com aprovação** (`docs/SEM_IA_MIGRACAO.md`); nada é removido antes de substituto aprovado; versão atual recuperável. `tests/test_sem_ia_guard.py` impede novos usos de ML; `test_noai_mode` exige `ai_mode='sem_ia'` funcional.
 2. **Nada de vídeo vai para servidor.** `hooks_cloud` = conta, plano, licença, cobrança, uso.
 3. **Menos é mais ≠ menos capacidade.** Inspetor contextual (seleção manda), 3 pistas (Vídeo, Legendas, Áudio) + extras sob demanda, 3 níveis (essencial / contextual / avançado).
 4. **Humano decide.** Nada publica sozinho; heurísticas rotuladas.
@@ -50,4 +50,4 @@ Distinguir verificado · testado · hipótese. Não escrever "funciona" sem exec
 Cada melhoria grande: ANTES → PROBLEMA → ALTERAÇÃO → TESTE → RESULTADO em `docs/CHANGELOG.md`.
 
 ## Documentos
-`docs/ARCHITECTURE.md` · `docs/ROADMAP.md` · `docs/CHANGELOG.md` · `docs/KNOWN_ISSUES.md` · `docs/UX_MATRIX.md` · `docs/AI_DEPENDENCIES.md` · `docs/BASELINE.md` (medições iniciais) · `docs/handoff/` (pacote histórico recebido: dossiê, inventário, decisões, perguntas em aberto).
+`docs/ARCHITECTURE.md` · `docs/ROADMAP.md` · `docs/CHANGELOG.md` · `docs/KNOWN_ISSUES.md` · `docs/UX_MATRIX.md` · `docs/SEM_IA_MIGRACAO.md` · `docs/BASELINE.md` (medições iniciais) · `docs/handoff/` (pacote histórico recebido: dossiê, inventário, decisões, perguntas em aberto).

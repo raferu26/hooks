@@ -24,7 +24,7 @@ Estado: ✔ feito e verificado · ◐ parcial · ○ pendente · ⛔ bloqueado (
 | 4 | Consistência prévia × exportação | ◐ | `test_corpus_cortes` | legenda HTML ≈ libass (V04) |
 | 5 | Medição de RAM/CPU/GPU, vídeos longos, estabilidade | ○ | benchmarks | |
 | 5 | Validação Windows e GPU (C01/C02) | ⛔ | PC do Rafael | |
-| — | Decisão A01: Sem IA como padrão | ⛔ | Rafael | plano em `AI_DEPENDENCIES.md` |
+| — | **A01 decidida: Hook's 100% sem IA.** Fase 0 ✔ (plano + guarda). Fases 1–5 em `SEM_IA_MIGRACAO.md`; remoções só com aprovação por fase | ◐ | Fase 1 (substitutos) | paralelo ao redesign |
 | 6 | Instalador, atualização, licenciamento, SaaS hospedado | ⛔ | Etapas 1–5; aprovação de custo | F01–F06 |
 | — | Validar escolha de momentos com lives reais (C05), YouTube real (C06) | ⛔ | dados do Rafael | |
 

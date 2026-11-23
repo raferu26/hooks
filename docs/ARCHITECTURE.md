@@ -52,3 +52,6 @@ Retentativas de análise 30 s/2 min/5 min; `LowSpace` pausa a pista; falha de an
 
 ## Limites conhecidos
 Ver `docs/KNOWN_ISSUES.md`. Nada foi validado em Windows, GPU, live real, YouTube real ou com pessoas.
+
+## Restrição permanente: sem IA
+A arquitetura comercial final não contém modelos de ML. Componentes herdados (Whisper, MediaPipe, Haar, RNNoise, Ollama) são opcionais e têm plano de saída em `docs/SEM_IA_MIGRACAO.md`; o guarda `tests/test_sem_ia_guard.py` lista onde ainda existem.
