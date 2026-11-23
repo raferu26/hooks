@@ -1,6 +1,7 @@
 import subprocess,time,re,sys,json,os,tempfile
+HERE=os.path.dirname(os.path.abspath(__file__))
 os.chdir(tempfile.mkdtemp(prefix='hooks_modos_'))   # arquivos de saída ficam fora do repositório
-sys.path.insert(0,os.path.join(os.path.dirname(os.path.abspath(__file__)),'..'))
+sys.path.insert(0,os.path.join(HERE,'..'))
 from liveclips import hardware
 src='src.mp4'
 # fonte com movimento, ruído e degradê (sintética: não substitui clipe real)
