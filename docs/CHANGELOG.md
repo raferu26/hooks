@@ -133,3 +133,9 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 - **TESTE:** `tests/test_legenda_previa.py` (7: tabela de tamanhos ≡ exportador; **paridade JS↔Python**: 175 casos de blocos em 7 estilos, texto visível em muitos instantes vs eventos do ASS, `textwrap` em 300 casos, tamanhos/margens dos títulos); e2e: 14 checagens de legenda (7 estilos × tamanho/base), 4 de títulos, 3 de blocos; e2e completo sem falhas.
 - **RESULTADO (mesma fonte, texto curto, 1 linha):** legendas — largura/altura HTML÷ASS **0,98–1,00** nos 7 estilos, base ≤0,56 pt % (box, por causa da caixa); títulos — largura 0,99–1,00, altura 0,97–1,00, topo ≤0,15 pt %.
 - **Limites:** fontes de marca e o Arial real do Windows; hífen na quebra dos títulos (o `textwrap` quebra em hífen, o porte não); cor/contorno/sombra e animações (fade/pop) não comparados; só texto de 1 linha foi medido em pixels (blocos/quebras validados por paridade lógica).
+
+## [Duração final visível: o que os cortes mudam] — 24/11/2026 (timeline, estados; branch `feature/duracao-final`)
+- **ANTES:** a barra mostrava só a duração do corte; quem removia um trecho não via que o vídeo final ficava mais curto nem que o que vem depois "adianta" (ripple implícito).
+- **ALTERAÇÃO** (`ui/studio.js`): `finalEstimate()` une os cortes (manuais e pausas automáticas) e a barra mostra `0:28 → 0:25 (−3,0 s)`, com dica explicando; vira "≈" quando velocidade/congelar/replay/abertura também mudam a duração.
+- **TESTE:** e2e `duracao_final_*` (3): cortes sobrepostos contam uma vez, aparece na barra, **bate com `timing_for` do servidor (±0,12 s)** depois de salvar.
+- **Limites:** sem velocidade/replay o número é exato; com eles é aproximado até a prévia gravar o mapa de tempo.

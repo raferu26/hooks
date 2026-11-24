@@ -224,6 +224,19 @@ with sync_playwright() as p:
     check('fala_atualiza_risco_no_lugar', pg.evaluate("document.querySelectorAll('#stLeft .w.cutw').length") > n0)
     pg.keyboard.press('Control+z'); pg.wait_for_timeout(200)
     check('fala_desfaz_risco_no_lugar', pg.evaluate("document.querySelectorAll('#stLeft .w.cutw').length") == n0)
+    # duração final: o corte mostra quanto os cortes removem (e bate com o mapa de tempo do servidor depois de salvar)
+    pg.evaluate("ST.sel=null;ST.item=null;ST.proj.cuts=[];ST.proj.speeds=[];ST.proj.freezes=[];ST.proj.replays=[];ST.proj.teaser=null;ST.proj.zooms=[];drawAll()")
+    fd0 = pg.evaluate("finalEstimate().removed")
+    pg.evaluate("mutate(()=>{ST.proj.cuts.push({_k:'fd1',start:2,end:4},{_k:'fd2',start:3,end:5})})"); pg.wait_for_timeout(200)
+    est = pg.evaluate("finalEstimate()")
+    check('duracao_final_une_cortes_sobrepostos', abs(est['removed'] - 3.0) < .01 and not est['approx'], est)
+    check('duracao_final_aparece_na_barra', pg.evaluate("/−3,0 s/.test(document.getElementById('stPrev').textContent)"), pg.evaluate("document.getElementById('stPrev').textContent"))
+    for _ in range(60):
+        if pg.evaluate("!ST.dirty&&ST.data.saved"): break
+        pg.wait_for_timeout(100)
+    srv = pg.evaluate("api('/api/project/get',{id:ST.id}).then(d=>d.timing.final_duration)")
+    check('duracao_final_igual_ao_servidor', abs(srv - est['final']) < .12, [srv, est['final']])
+    pg.evaluate("mutate(()=>{ST.proj.cuts=[]})"); pg.wait_for_timeout(200)
     # seletor de qualidade
     modes = pg.evaluate("[...document.querySelectorAll('#stQuality option')].map(o=>o.value)")
     check('quatro_modos_no_exportar', modes == ['rapido', 'equilibrado', 'qualidade', 'entrega'], modes)
