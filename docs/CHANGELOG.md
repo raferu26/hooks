@@ -114,3 +114,8 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 ## [Fidelidade prévia × exportação final — medição] — 24/11/2026
 - **Medição** (corte de 28 s, vídeo sintético, modo Equilibrado, CPU): SSIM do final (1080×1920 reduzido a 540×960) contra o **rascunho novo** = **0,9759**; contra o **rascunho antigo** (mesmo trecho, filtros de 0.19) = **0,9757**. A otimização do rascunho **não** reduziu a fidelidade ao arquivo final (diferença 0,0002). Tempos: prévia 6,5 s; exportação 35,1 s.
 - **Limites:** fonte sintética; legenda/título do final não aparecem no rascunho (a prévia usa legenda ao vivo em HTML — comparação lado a lado com libass segue pendente, V04); GPU não testada.
+
+## [Beta Windows: empacotamento verificado] — 24/11/2026 (branch `feature/windows-beta`)
+- **ALTERAÇÃO:** `tools/empacotar_release.py` gera `Hooks-<versão>.zip` + `.sha256` **a partir do git** (árvore limpa), com `MANIFESTO.sha256`, e verifica: ZIP íntegro, hashes, `.bat` CRLF, `chcp 65001`, sem segredos/vídeos/banco/venv/tests/validação, arquivos exigidos. `INSTALAR.bat` **deixa de baixar o modelo facial** (regra "sem download silencioso de modelo"; o app já funciona sem ele). `docs/WINDOWS_BETA.md`: procedimento e roteiro de teste físico W01–W10.
+- **TESTE:** `tests/test_release_pack.py` (4 OK); pacote real da 0.19.0 gerado com as 7 verificações OK.
+- **NÃO validado:** execução em Windows (nada foi rodado lá); o ZIP ainda é da versão 0.19.0-beta.1 — a versão da próxima beta será definida ao integrar o PR #1.
