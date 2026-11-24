@@ -124,3 +124,9 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 - **ALTERAÇÃO:** `tools/empacotar_release.py` gera `Hooks-<versão>.zip` + `.sha256` **a partir do git** (árvore limpa), com `MANIFESTO.sha256`, e verifica: ZIP íntegro, hashes, `.bat` CRLF, `chcp 65001`, sem segredos/vídeos/banco/venv/tests/validação, arquivos exigidos. `INSTALAR.bat` **deixa de baixar o modelo facial** (regra "sem download silencioso de modelo"; o app já funciona sem ele). `docs/WINDOWS_BETA.md`: procedimento e roteiro de teste físico W01–W10.
 - **TESTE:** `tests/test_release_pack.py` (4 OK); pacote real da 0.19.0 gerado com as 7 verificações OK.
 - **NÃO validado:** execução em Windows (nada foi rodado lá); o ZIP ainda é da versão 0.19.0-beta.1 — a versão da próxima beta será definida ao integrar o PR #1.
+
+## [Beta Windows: verificações estáticas e de rede] — 24/11/2026 (branch `feature/windows-beta`)
+- **Medido:** wheels win_amd64/cp311 de todas as dependências resolvem (345 MB; ~74% da pilha vem de IA — argumento de tamanho/instalação para a remoção planejada); numpy fica em 1.26.4 no Windows (testes em Linux usaram 2.5.5).
+- **Corrigido:** `music.py` chamava o FFmpeg sem `creationflags` (janela de console piscando no Windows).
+- **TESTE:** `tests/test_windows_static.py` (5: console oculto em todas as chamadas, `fcntl` protegido, sem caminhos Unix, `.bat` CRLF/chcp, versões pinadas); `tests/test_sem_downloads.py` (4: rede confinada a módulos conhecidos, instaladores sem modelos, nenhum fetch na partida); `test_noai_mode` + teste de **nenhuma conexão externa** no modo sem IA (7 OK).
+- **Não validado:** execução no Windows, CPU/GPU, Python 3.11 + numpy 1.26.4, antivírus.

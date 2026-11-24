@@ -37,3 +37,15 @@ Envie: `instalacao.log`, `hooks_servidor.log` (em `C:\LiveClips`), o modelo da C
 
 ## 5. Riscos conhecidos (não resolvidos)
 Antivírus pode bloquear `.bat`/venv; caminho com espaços/acentos; `winget` ausente (Windows 10 antigo); FFmpeg do winget sem o filtro `afwtdn` (há fallback `afftdn`); encoders GPU não validados; i7-3770 com várias pistas disputando núcleos; instalador exige Python 3.11 instalado pelo usuário.
+
+## 6. O que foi verificado em Linux para esta beta (sem executar no Windows)
+| Verificação | Resultado | Como reproduzir |
+|---|---|---|
+| **Wheels para Windows** (cp311, win_amd64) de **todas** as dependências do `requirements.txt` | resolvem: 69 arquivos, **345 MB** de wheels; numpy fica em **1.26.4** (imposto pelo `mediapipe`) | `pip download --platform win_amd64 --python-version 3.11 --implementation cp --abi cp311 --only-binary=:all: -r requirements.txt` |
+| Peso da pilha de IA | ≈ **255 MB (74%)** dos wheels vêm de `mediapipe` (jax/jaxlib/scipy/matplotlib…) e `faster-whisper` (ctranslate2/av/onnxruntime/tokenizers); o núcleo (numpy, OpenCV, streamlink, yt-dlp, cryptography) ≈ 69 MB + dependências leves — estimativa por nome de pacote | idem, agrupando por pacote |
+| Janela de console piscando | todas as chamadas `subprocess` passam `creationflags` (**1 faltava**, em `music.py`, corrigida) | `tests/test_windows_static.py` |
+| Código só de Linux | `fcntl` protegido por `os.name`; sem caminhos Unix fixos no produto | idem |
+| `.bat` | CRLF e `chcp 65001` | idem |
+| **Downloads de modelos** | o instalador não baixa nada; a rede só é usada em módulos listados (ação do usuário/configuração); o **modo sem IA não abre conexão externa** durante análise, sugestão e render | `tests/test_sem_downloads.py`; `tests/test_noai_mode.py::test_no_outbound_network_in_no_ai_mode` |
+| Pacote | ZIP com manifesto, 7 verificações | `tools/empacotar_release.py` |
+**Limites desta verificação:** os testes rodaram com **numpy 2.5.5** (Linux, Python 3.13); no Windows a instalação usa numpy 1.26.4 e Python 3.11 — combinação **não testada**. Existir wheel não prova que a biblioteca funciona no PC do cliente (drivers, antivírus, VC++ runtime). Uso de CPU/GPU, tempo de exportação e inicialização só se medem no Windows (roteiro W01–W10).
