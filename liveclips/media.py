@@ -1422,7 +1422,7 @@ def _render_single(candidate,transcript,scratch,target,output,applied_cuts,look,
     has_audio=any(item['has_audio'] for item in infos) or bool(meta.get('external_audio'))
     info=dict(width=width,height=height,fps=first.get('fps',30),has_audio=has_audio,duration=duration)
     if multi:info.update(display_width=width,display_height=height)      # fontes unidas já chegam normalizadas (setsar=1)
-    else:info.update(display_width=first['display_width'],display_height=first['display_height'],sar_fix=first['sar'])
+    else:info.update(display_width=first.get('display_width',first['width']),display_height=first.get('display_height',first['height']),sar_fix=first.get('sar',1.0))
     output_fps=60 if info['fps']>=50 and not draft else 30
     if not variant and not draft:_attach_plan(candidate,parts,pieces,duration,output_fps,canvas,project,teaser_count,meta)
     punches=retime_points(punches_for(candidate),remap)
