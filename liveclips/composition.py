@@ -18,6 +18,9 @@ ROLES = ('webcam', 'conteudo', 'webcam2')
 FITS = ('fit', 'fill', 'custom')
 BG_KINDS = ('black', 'color', 'blur')
 CORNERS = ('tl', 'tr', 'bl', 'br', 'free')
+SCENE_LIMIT = 24
+SCENE_MIN = .4              # segundos
+FADE_MAX = 1.0              # transição suave: no máximo 1 s
 MIN_REGION = .02            # fração mínima do quadro (2%) para uma região ser considerada marcada
 UPSCALE_WARN = 2.0          # ampliar mais que isso deixa a imagem visivelmente suave
 HEX = re.compile(r'^#?([0-9a-fA-F]{6})$')
@@ -107,7 +110,7 @@ def clean_region(raw, role):
     return dict(x=round(x0, 5), y=round(y0, 5), w=round(x1 - x0, 5), h=round(y1 - y0, 5))
 
 
-def clean(raw):
+def clean(raw, duration=None):
     """Valida/normaliza `project['composition']`. Devolve None (sem composição) ou o dicionário canônico.
 
     Regiões ausentes são aceitas (o assistente ainda está marcando): a composição fica `incompleta` e o render usa o
@@ -155,7 +158,38 @@ def clean(raw):
     params['pip_margin'] = int(_num(params['pip_margin'], 0, 200, 'pip_margin', 40))
     params['gap'] = int(params['gap'])
     params['pip_border'] = int(params['pip_border'])
-    return dict(version=VERSION, layout=layout, regions=regions, params=params)
+    out = dict(version=VERSION, layout=layout, regions=regions, params=params)
+    scenes = clean_scenes(raw.get('scenes'), duration)
+    if scenes:
+        out['scenes'] = scenes
+    return out
+
+
+def clean_scenes(raw, duration=None):
+    """Cenas de reação: outro layout (e ajustes) em um intervalo. Tempos em segundos do CLIPE (antes dos cortes), como os
+    demais itens do projeto. As regiões são as da composição base; uma cena guarda só o layout, os ajustes e a transição."""
+    if not raw:
+        return []
+    if not isinstance(raw, list) or len(raw) > SCENE_LIMIT:
+        raise ValueError(f'Use no máximo {SCENE_LIMIT} cenas de reação.')
+    out = []
+    for index, item in enumerate(raw):
+        if not isinstance(item, dict) or item.get('layout') not in LAYOUTS:
+            raise ValueError('Cena de reação com layout desconhecido.')
+        top = float(duration) if duration is not None else 36000.0
+        start = round(_num(item.get('start'), 0, top, 'Início da cena', 0), 3)
+        end = round(_num(item.get('end'), 0, top, 'Fim da cena', 0), 3)
+        if end - start < SCENE_MIN:
+            raise ValueError(f'A cena precisa durar pelo menos {SCENE_MIN:g} s.')
+        single = clean(dict(layout=item['layout'], params=item.get('params')))
+        scene = dict(id=str(item.get('id') or f'e{index}')[:40], start=start, end=end, layout=item['layout'], params=single['params'],
+                     fade=round(_num(item.get('fade'), 0, FADE_MAX, 'Transição', 0), 2))
+        out.append(scene)
+    out.sort(key=lambda sc: sc['start'])
+    for before, after in zip(out, out[1:]):
+        if after['start'] < before['end'] - .001:
+            raise ValueError('Duas cenas de reação não podem se sobrepor.')
+    return out
 
 
 def is_ready(comp):
@@ -304,47 +338,159 @@ def _color(value):
     return '0x' + HEX.match(value).group(1).upper()
 
 
-def video_graph(comp, SW, SH, source='0:v', fps=30, canvas=CANVAS, sar=1.0, out='base', draft=False):
-    """Trecho de filtergraph source → [out] (yuv420p, canvas) para a composição. Levanta ValueError se estiver incompleta.
-
-    `SW`,`SH`: dimensões de exibição do quadro que chega em `source` (já com rotação aplicada pelo FFmpeg). `sar`≠1 é
-    normalizado no início para que os recortes em pixels batam com as frações das regiões."""
-    plan = resolve(comp, SW, SH, canvas)
-    if not plan['ready']:
-        raise ValueError('A composição de reação está incompleta: marque ' + ' e '.join(ROLE_LABELS[r] for r in plan['missing']) + '.')
+def _composite(plan, canvas, source, out, tag, draft=False):
+    """Filtros que montam UMA composição: `source` (yuv, setsar=1) → `out` (canvas, yuv420p). Rótulos com prefixo `tag`."""
     W, H = canvas
     layers = plan['layers']
     bgk = plan['bg']['kind']
     count = len(layers) + 1
-    head = f'[{source}]fps={fps},'
-    if abs(sar - 1) > 1e-3:
-        head += f'scale=trunc(iw*{sar:.6f}/2)*2:ih:flags=lanczos,'
-    head += 'setsar=1,' + (f'split={count}' + ''.join(f'[c{i}]' for i in range(count)))
-    parts = [head]
-    bg_in = f'c{count - 1}'
+    parts = [f'[{source}]split={count}' + ''.join(f'[{tag}c{i}]' for i in range(count))]
+    bg_in = f'{tag}c{count - 1}'
     if bgk == 'blur':
         if draft:
             parts.append(f'[{bg_in}]scale={W // 8}:{H // 8}:force_original_aspect_ratio=increase:flags=bilinear,crop={W // 8}:{H // 8},'
-                         f'gblur=sigma=7,scale={W}:{H}:flags=bilinear[bg]')
+                         f'gblur=sigma=7,scale={W}:{H}:flags=bilinear[{tag}bg]')
         else:
-            parts.append(f'[{bg_in}]scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,crop={W}:{H},gblur=sigma=28[bg]')
+            parts.append(f'[{bg_in}]scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,crop={W}:{H},gblur=sigma=28[{tag}bg]')
     else:
         color = _color(plan['bg']['color'] if bgk == 'color' else '#000000')
-        parts.append(f'[{bg_in}]scale=64:36:flags=neighbor,scale={W}:{H}:flags=neighbor,drawbox=x=0:y=0:w={W}:h={H}:color={color}:t=fill[bg]')
-    current = 'bg'
+        parts.append(f'[{bg_in}]scale=64:36:flags=neighbor,scale={W}:{H}:flags=neighbor,drawbox=x=0:y=0:w={W}:h={H}:color={color}:t=fill[{tag}bg]')
+    current = f'{tag}bg'
     for i, layer in enumerate(layers):
         cx, cy, cw, ch = layer['crop']
         ow, oh = layer['size']
-        chain = f'[c{i}]crop={cw}:{ch}:{cx}:{cy},scale={ow}:{oh}:flags={"bilinear" if draft else "lanczos"},setsar=1'
+        chain = f'[{tag}c{i}]crop={cw}:{ch}:{cx}:{cy},scale={ow}:{oh}:flags={"bilinear" if draft else "lanczos"},setsar=1'
         if layer.get('border'):
             chain += f',drawbox=x=0:y=0:w=iw:h=ih:color={_color(layer["border_color"])}:t={layer["border"]}'
-        parts.append(chain + f'[l{i}]')
-        last = i == len(layers) - 1
-        label = 'ovr' if last else f'o{i}'
+        parts.append(chain + f'[{tag}l{i}]')
+        label = f'{tag}ovr' if i == len(layers) - 1 else f'{tag}o{i}'
         px, py = layer['pos']
-        parts.append(f'[{current}][l{i}]overlay={px}:{py}:format=auto[{label}]')
+        parts.append(f'[{current}][{tag}l{i}]overlay={px}:{py}:format=auto[{label}]')
         current = label
     parts.append(f'[{current}]setsar=1,format=yuv420p[{out}]')
+    return parts
+
+
+def _head(source, fps, sar, label):
+    chain = f'[{source}]fps={fps},'
+    if abs(sar - 1) > 1e-3:
+        chain += f'scale=trunc(iw*{sar:.6f}/2)*2:ih:flags=lanczos,'
+    return chain + f'setsar=1[{label}]'
+
+
+def variants(comp):
+    """id → composição efetiva: 'base' e uma por cena (mesmas regiões; layout e ajustes próprios da cena)."""
+    out = {'base': comp}
+    for scene in comp.get('scenes') or []:
+        out[scene['id']] = dict(version=VERSION, layout=scene['layout'], regions=comp['regions'], params=scene['params'])
+    return out
+
+
+def scene_problems(comp):
+    """Cenas que não podem ser renderizadas (falta marcar alguma região do layout da cena)."""
+    bad = []
+    for scene in comp.get('scenes') or []:
+        miss = [r for r in LAYOUTS[scene['layout']]['roles'] if r not in comp['regions']]
+        if miss:
+            bad.append((scene, miss))
+    return bad
+
+
+def segments(comp, pieces, duration, fps):
+    """Trechos [{start,end,variant,fade}] no tempo FINAL (segundos, múltiplos de 1/fps) cobrindo 0..duration.
+
+    `pieces`: [(out_a, out_b, clip_a, clip_b)] — como o vídeo final é montado (abertura, trechos mantidos, velocidade,
+    replays, congelamentos). Cada trecho final mostra o layout da cena que cobre o instante do CLIPE que ele exibe; uma
+    cena que cai no meio de um trecho o divide. Mesmo instante do clipe exibido duas vezes (replay) usa a mesma cena."""
+    bad = {s['id'] for s, _ in scene_problems(comp)}
+    scenes = [s for s in comp.get('scenes') or [] if s['id'] not in bad]
+    frames = max(1, int(round(duration * fps)))
+    cuts = []
+    for out_a, out_b, clip_a, clip_b in pieces:
+        points = [(out_a, clip_a)]
+        if clip_b > clip_a and out_b > out_a:
+            for scene in scenes:
+                for t in (scene['start'], scene['end']):
+                    if clip_a < t < clip_b:
+                        points.append((out_a + (t - clip_a) * (out_b - out_a) / (clip_b - clip_a), t))
+        points.sort()
+        ends = [p[0] for p in points[1:]] + [out_b]
+        for (start, clip_t), end in zip(points, ends):
+            mid = clip_t + ((clip_b - clip_a) / (out_b - out_a) * (end - start) / 2 if out_b > out_a and clip_b > clip_a else 0)
+            hit = next((s for s in scenes if s['start'] <= mid < s['end']), None)
+            cuts.append((start, end, hit['id'] if hit else 'base', hit['fade'] if hit else 0.0))
+    segs = []
+    for start, end, variant, fade in cuts:
+        a, b = int(round(start * fps)), int(round(end * fps))
+        if b <= a:
+            continue
+        if segs and segs[-1]['variant'] == variant and segs[-1]['b'] == a:
+            segs[-1]['b'] = b
+        else:
+            segs.append(dict(a=a, b=b, variant=variant, scene_fade=fade))
+    if not segs:
+        return [dict(start=0.0, end=duration, variant='base', fade=0.0, frames=frames)]
+    segs[0]['a'] = 0
+    segs[-1]['b'] = max(segs[-1]['b'], frames)
+    for before, after in zip(segs, segs[1:]):
+        after['a'] = before['b']                       # sem lacunas nem sobras entre trechos
+    out = []
+    for k, seg in enumerate(segs):
+        fade_s = 0.0
+        if k:
+            prev = segs[k - 1]
+            fade_s = seg['scene_fade'] if seg['variant'] != 'base' else prev['scene_fade']
+        n = min(int(round(fade_s * fps)), seg['b'] - seg['a'] - 1)
+        out.append(dict(start=seg['a'] / fps, end=seg['b'] / fps, variant=seg['variant'], frames=seg['b'] - seg['a'],
+                        fade=n if n >= 2 else 0, previous=segs[k - 1]['variant'] if k else None))
+    return out
+
+
+def video_graph(comp, SW, SH, source='0:v', fps=30, canvas=CANVAS, sar=1.0, out='base', draft=False, segs=None):
+    """Trecho de filtergraph source → [out] (yuv420p, canvas) para a composição. Levanta ValueError se estiver incompleta.
+
+    `SW`,`SH`: dimensões de exibição do quadro que chega em `source` (já com rotação aplicada pelo FFmpeg). `sar`≠1 é
+    normalizado no início para que os recortes em pixels batam com as frações das regiões.
+    `segs` (de `segments()`): trechos de tempo com cenas diferentes; cada quadro é composto uma única vez (trim + concat),
+    exceto nos quadros de uma transição suave, que compõem as duas cenas e misturam com peso linear no tempo."""
+    plan = resolve(comp, SW, SH, canvas)
+    if not plan['ready']:
+        raise ValueError('A composição de reação está incompleta: marque ' + ' e '.join(ROLE_LABELS[r] for r in plan['missing']) + '.')
+    if not segs or all(seg['variant'] == 'base' for seg in segs):
+        return ';'.join([_head(source, fps, sar, 'h')] + _composite(plan, canvas, 'h', out, '', draft))
+    plans = {key: resolve(value, SW, SH, canvas) for key, value in variants(comp).items()}
+    uses = []                                                     # (variante, início, fim|None) em quadros
+    pieces = []                                                   # como juntar: ('plain', i) ou ('blend', i, j)
+    last = len(segs) - 1
+    for k, seg in enumerate(segs):
+        a, b = int(round(seg['start'] * fps)), int(round(seg['end'] * fps))
+        end = None if k == last else b
+        if seg['fade'] and seg['previous'] in plans:
+            n = seg['fade']
+            uses.append((seg['previous'], a, a + n))
+            uses.append((seg['variant'], a, a + n))
+            pieces.append(('blend', len(uses) - 2, len(uses) - 1, n))
+            uses.append((seg['variant'], a + n, end))
+            pieces.append(('plain', len(uses) - 1))
+        else:
+            uses.append((seg['variant'], a, end))
+            pieces.append(('plain', len(uses) - 1))
+    parts = [_head(source, fps, sar, 'h')]
+    parts.append('[h]split=%d' % len(uses) + ''.join(f'[u{i}]' for i in range(len(uses))))
+    for i, (variant, a, b) in enumerate(uses):
+        window = f'start_frame={a}' + (f':end_frame={b}' if b is not None else '')
+        parts.append(f'[u{i}]trim={window},setpts=PTS-STARTPTS[t{i}]')
+        parts += _composite(plans[variant], canvas, f't{i}', f'v{i}', f'k{i}', draft)
+    labels = []
+    for k, piece in enumerate(pieces):
+        if piece[0] == 'plain':
+            labels.append(f'v{piece[1]}')
+        else:
+            n = piece[3]
+            d = n / float(fps)
+            parts.append(f"[v{piece[1]}][v{piece[2]}]blend=all_expr='A*(1-min(1,T/{d:.6f}))+B*min(1,T/{d:.6f})'[x{k}]")
+            labels.append(f'x{k}')
+    parts.append(''.join(f'[{label}]' for label in labels) + f'concat=n={len(labels)}:v=1:a=0,setsar=1,format=yuv420p[{out}]')
     return ';'.join(parts)
 
 

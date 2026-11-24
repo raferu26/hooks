@@ -879,7 +879,7 @@ def blur_regions(profile):
 
 
 def final_video(profile,info,output_fps,duration,vsrc,punches,assets,look,ass,first_extra,reframe_plan,push_enabled,supersample=None,flash=None,
-                canvas=(1080,1920),layout=None,ass_name='legendas.ass',draft=False,composition=None):
+                canvas=(1080,1920),layout=None,ass_name='legendas.ass',draft=False,composition=None,composition_segments=None):
     """Quadro final (padrão 1080x1920): layout, zoom por punch, cor, imagens e legendas.
 
     `composition`: composição de reação pronta (liveclips.composition) — substitui o enquadramento padrão e desliga o zoom
@@ -890,7 +890,7 @@ def final_video(profile,info,output_fps,duration,vsrc,punches,assets,look,ass,fi
     reacao=bool(composition) and canvas==comp_module.CANVAS and comp_module.is_ready(composition)
     if reacao:
         filters=comp_module.video_graph(composition,info.get('display_width',info['width']),info.get('display_height',info['height']),
-                                        source=vsrc,fps=output_fps,canvas=canvas,sar=info.get('sar_fix',1.0),draft=draft)
+                                        source=vsrc,fps=output_fps,canvas=canvas,sar=info.get('sar_fix',1.0),draft=draft,segs=composition_segments)
         punches=[];push=None
     elif video or layout['mode']=='wide':
         mode=layout['mode'] if layout['mode'] in VIDEO_LAYOUTS else 'fit'
@@ -1383,6 +1383,18 @@ def _overrides_of(candidate):
     return value if isinstance(value,dict) else {}
 
 
+def composition_pieces(remap,teaser,lead):
+    """Como o vídeo final é montado, para as cenas de reação: [(início_final, fim_final, início_clipe, fim_clipe)].
+
+    Mesma ordem de `plan_pieces`: abertura (teaser), depois cada trecho mantido (com velocidade, replays e congelamentos)."""
+    out=[]
+    if teaser:out.append((0.0,float(lead),float(teaser[0]),float(teaser[1])))
+    for item in remap.sequence:
+        a,b,start,rate,hold=item[:5];begin=float(start)+float(lead)
+        out.append((begin,begin+float(hold),float(a),float(a)) if rate is None else (begin,begin+(b-a)/rate,float(a),float(b)))
+    return out
+
+
 def composition_ready(comp,canvas):
     from . import composition
     return bool(comp) and tuple(canvas)==composition.CANVAS and composition.is_ready(comp)
@@ -1431,6 +1443,10 @@ def _render_single(candidate,transcript,scratch,target,output,applied_cuts,look,
                         canvas=canvas,name=name,deliver=variant is None,root=meta.get('root'),text=not draft)
     reframe_plan=[]
     reacao=composition_ready((project or {}).get('composition'),canvas)
+    scene_segments=None
+    if reacao and (project['composition'].get('scenes')):
+        from . import composition as comp_module
+        scene_segments=comp_module.segments(project['composition'],composition_pieces(remap,teaser,lead),duration,output_fps)
     if not reacao and canvas==(1080,1920) and profile.get('content_mode','live')=='video' and profile.get('auto_reframe',True) \
             and profile.get('reframe_mode','conservative') in ('dynamic','speaker','rastreio'):
         cursor=0.0
@@ -1453,7 +1469,7 @@ def _render_single(candidate,transcript,scratch,target,output,applied_cuts,look,
     layout=(project or {}).get('layout')
     video_graph,visual=final_video(profile,info,output_fps,duration,source_label,punches,assets,look,ass,indexed,
                                    reframe_plan,push_enabled,supersample=1 if draft else None,flash=lead if teaser else None,
-                                   canvas=canvas,layout=layout,ass_name=name,draft=draft,composition=(project or {}).get('composition'))
+                                   canvas=canvas,layout=layout,ass_name=name,draft=draft,composition=(project or {}).get('composition'),composition_segments=scene_segments)
     if draft:
         video_graph+=f';[{visual}]scale=540:960:flags=fast_bilinear,setsar=1[draft]';visual='draft'
     graph=[source_filters,video_graph];audio_map=[]
