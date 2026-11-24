@@ -243,6 +243,20 @@ with sync_playwright() as p:
     # sair salva e fecha
     pg.evaluate("ST.proj.titles.push({id:'tq',text:'Teste saída',start:1,end:3,style:'big',position:'top',color:'#FFFFFF'});changed()")
     pg.click('#stBack'); pg.wait_for_timeout(1500)
+    # fidelidade da legenda ao vivo × ASS da exportação (tamanho e posição; estilo padrão)
+    import importlib.util as _iu
+    _sp = _iu.spec_from_file_location('legenda_fidelidade', os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'validacao', 'legenda_fidelidade.py'))
+    _lf = _iu.module_from_spec(_sp); _sp.loader.exec_module(_lf)
+    pg2 = b.new_page(viewport={'width': 1440, 'height': 900}); pg2.goto(f'http://127.0.0.1:{PORT}/'); pg2.wait_for_timeout(1500)
+    pg2.click('[data-clip]')
+    for _ in range(150):
+        if pg2.evaluate("typeof ST!=='undefined'&&ST.open&&!!ST.data&&ST.data.preview.available"): break
+        pg2.wait_for_timeout(200)
+    pg2.wait_for_timeout(500)
+    lf = _lf.measure(pg2, 'dynamic'); res['legenda_fidelidade'] = lf; pg2.close()
+    check('legenda_largura_igual_ao_ass', .96 <= lf.get('razao_largura_html_sobre_ass', 0) <= 1.04, lf)
+    check('legenda_altura_igual_ao_ass', .96 <= lf.get('razao_altura_html_sobre_ass', 0) <= 1.04, lf)
+    check('legenda_base_igual_ao_ass', abs(lf.get('diferenca_base_pontos_pct', 9)) < .5, lf)
     check('sair_fecha', not pg.evaluate("ST.open"))
     res['console_errors'] = errs
     check('sem_erros_console', not errs, errs)
