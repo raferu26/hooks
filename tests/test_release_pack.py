@@ -53,3 +53,48 @@ class Pack(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+@unittest.skipUnless(shutil.which('git') and (EP.ROOT / '.git').exists(), 'sem repositório git')
+class TestPackage(unittest.TestCase):
+    """Pacote de TESTE para Windows (variante sem IA): wheels offline, scripts, roteiro, commit identificado e nenhum wheel de IA."""
+
+    def _wheels(self, names):
+        d = Path(tempfile.mkdtemp(prefix='hk_whl_')); self.addCleanup(shutil.rmtree, d, True)
+        for n in names:
+            (d / n).write_bytes(b'PK\x03\x04fake')
+        return d
+
+    def _need_files(self):
+        need = ['tools/empacotar_release.py', 'docs/WINDOWS_TESTE/LEIA-ME_TESTE_WINDOWS.txt', 'INSTALAR_TESTE.bat', 'requirements-sem-ia.txt']
+        tracked = subprocess.run(['git', '-C', str(EP.ROOT), 'ls-files', *need], capture_output=True, text=True).stdout.split()
+        if len(tracked) < len(need):
+            self.skipTest('arquivos do pacote de teste ainda não commitados')
+
+    def test_builds_with_all_checks_and_identifies_the_commit(self):
+        self._need_files()
+        out = Path(tempfile.mkdtemp(prefix='hk_t_')); self.addCleanup(shutil.rmtree, out, True)
+        z, digest, checks = EP.build_test(out, self._wheels(['numpy-1.26.4-cp311-cp311-win_amd64.whl', 'idna-3.7-py3-none-any.whl', 'streamlink-8.6.3-py3-none-win_amd64.whl']),
+                                          includes=['PR #3'], allow_dirty=True)
+        self.assertEqual([c for c in checks if not c[1]], [])
+        self.assertIn(EP.head_commit()[:10], z.name)
+        with zipfile.ZipFile(z) as zf:
+            prefix = zf.namelist()[0].split('/')[0] + '/'
+            info = __import__('json').loads(zf.read(prefix + 'BUILD_INFO.json'))
+            self.assertTrue(zf.read(prefix + 'INSTALAR_TESTE.bat').count(b'\r\n') > 20)
+            self.assertIn(prefix + 'VARIANTE_SEM_IA', zf.namelist())
+        self.assertEqual(info['commit'], EP.head_commit()); self.assertEqual(info['variant'], 'sem_ia'); self.assertEqual(info['includes'], ['PR #3'])
+
+    def test_refuses_ai_wheels_and_wrong_platform_wheels(self):
+        self._need_files()
+        out = Path(tempfile.mkdtemp(prefix='hk_t_')); self.addCleanup(shutil.rmtree, out, True)
+        with self.assertRaises(SystemExit):
+            EP.build_test(out, self._wheels(['mediapipe-0.10.21-cp311-cp311-win_amd64.whl']), allow_dirty=True)
+        with self.assertRaises(SystemExit):
+            EP.build_test(out, self._wheels(['numpy-1.26.4-cp311-cp311-manylinux_2_17_x86_64.whl']), allow_dirty=True)
+
+    def test_wheel_platform_rule(self):
+        for ok in ('numpy-1.26.4-cp311-cp311-win_amd64.whl', 'opencv_python_headless-4.10.0.84-cp37-abi3-win_amd64.whl', 'streamlink-8.6.3-py3-none-win_amd64.whl', 'x-1-py3-none-any.whl'):
+            self.assertTrue(EP.wheel_fits_windows_py311(ok), ok)
+        for bad in ('numpy-2.0-cp312-cp312-win_amd64.whl', 'x-1-cp311-cp311-linux_x86_64.whl'):
+            self.assertFalse(EP.wheel_fits_windows_py311(bad), bad)

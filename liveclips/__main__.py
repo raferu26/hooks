@@ -36,6 +36,10 @@ def main():
     if len(sys.argv)>1 and sys.argv[1]=='bench':
         from .bench import main as bench_main
         raise SystemExit(bench_main(sys.argv[2:]))
+    if len(sys.argv)>1 and sys.argv[1] in ('selfcheck','medir','relatorio'):
+        from . import selftest
+        if sys.argv[1]=='relatorio':selftest.relatorio();raise SystemExit(0)
+        raise SystemExit(selftest.selfcheck() if sys.argv[1]=='selfcheck' else selftest.medir(seconds=int(os.environ.get('HOOKS_MEDIR_SEGUNDOS','20'))))
     if len(sys.argv)>1 and sys.argv[1]=='diag':
         from . import media,support
         from .store import Store

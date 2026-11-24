@@ -1,0 +1,26 @@
+HOOK'S - VERSAO DE TESTE PARA WINDOWS (variante experimental sem IA)
+=====================================================================
+Esta e uma versao de TESTE. Ela nunca foi executada no Windows antes de chegar ate voce: o objetivo e descobrir o que quebra.
+Nada e enviado para a internet por este programa. Seus videos ficam no seu computador.
+
+O QUE VOCE PRECISA
+- Windows 10 ou 11 de 64 bits, ~2 GB livres, e a internet SO para o winget instalar Python 3.11 e FFmpeg (se voce ainda nao tem).
+- Um video real seu, de 1 a 3 minutos (MP4/MKV/MOV). Ele nao sai do seu computador.
+
+PASSO A PASSO
+1. Extraia o ZIP inteiro em uma pasta simples, por exemplo C:\Hooks (sem acentos). Nao rode de dentro do ZIP.
+2. (Opcional, 10 segundos) Duplo clique em VERIFICAR_PACOTE.bat: confere se nenhum arquivo foi corrompido.
+3. Duplo clique em INSTALAR_TESTE.bat. Ele cria o ambiente com os arquivos da pasta "wheels", instala FFmpeg/Python pelo winget se faltarem, e roda um autoteste.
+   Se o Windows pedir permissao do winget, aceite. Se algo falhar, a janela diz o que fazer; o registro fica em instalacao_teste.log.
+4. Abra o atalho "Hook's" na area de trabalho (ou ABRIR_LIVECLIPS.bat). O painel abre numa janela propria.
+5. Siga o CHECKLIST_W01_W10.md (abra no Bloco de Notas) e marque cada item como OK, FALHOU ou NAO TESTEI. Anote o que estranhar em REGISTRO_DE_PROBLEMAS.md.
+6. Para medir velocidade: MEDIR_DESEMPENHO.bat (usa um clipe sintetico; leva alguns minutos; feche outros programas).
+7. Quando terminar (ou se algo quebrar): COLETAR_RELATORIO.bat. Ele cria um ZIP na pasta RELATORIOS. Envie esse ZIP para quem esta ajudando.
+   O ZIP NAO leva seus videos, banco de dados nem perfis; o nome de usuario do Windows e tokens sao ocultados. Voce pode abrir o ZIP e conferir.
+
+SE O QUE VOCE VER NAO ESTIVER AQUI
+- Janela preta piscando, tela branca, erro vermelho, programa lento ou travado: anote em REGISTRO_DE_PROBLEMAS.md (o que fez, o que esperava, o que aconteceu) e, se puder, tire uma foto/captura da tela.
+- Nunca e preciso instalar bibliotecas manualmente. Se o instalador pedir algo, isso e um defeito: avise.
+
+SAIR / DESINSTALAR
+- Botao "Encerrar Hook's" na barra lateral. Para remover: apague a pasta do programa e a pasta de dados C:\LiveClips (la ficam seus projetos).

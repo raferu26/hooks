@@ -39,11 +39,25 @@ class WindowsStatic(unittest.TestCase):
             self.assertNotRegex(raw, rb'(?<!\r)\n', f'{b.name}: finais de linha não são CRLF')
         self.assertIn(b'chcp 65001', (ROOT / 'INSTALAR.bat').read_bytes())
 
+    def test_batch_echo_inside_parenthesized_blocks_has_no_stray_parenthesis(self):
+        """Um ')' dentro de `echo` num bloco `( ... )` do .bat fecha o bloco antes da hora e quebra o script no Windows."""
+        for b in sorted(ROOT.glob('*.bat')):
+            depth = 0
+            for n, line in enumerate(b.read_text(encoding='utf-8', errors='ignore').splitlines(), 1):
+                code = line.strip()
+                if depth and re.match(r'(?i)echo\b', code) and ')' in re.sub(r'\^\)', '', code):
+                    self.fail(f'{b.name}:{n}: ")" solto dentro de bloco: {code[:70]}')
+                if code.startswith(')'):
+                    depth = max(0, depth - 1)
+                if code.endswith('(') and not code.lower().startswith(('echo', 'rem')):
+                    depth += 1
+
     def test_requirements_are_pinned_or_bounded_for_reproducible_install(self):
-        for line in (ROOT / 'requirements.txt').read_text(encoding='utf-8').splitlines():
-            line = line.strip()
-            if line and not line.startswith('#'):
-                self.assertRegex(line, r'(==|>=)', f'dependência sem versão: {line}')
+        for name in ('requirements.txt', 'requirements-sem-ia.txt'):
+            for line in (ROOT / name).read_text(encoding='utf-8').splitlines():
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    self.assertRegex(line, r'(==|>=)', f'{name}: dependência sem versão: {line}')
 
 
 if __name__ == '__main__':
