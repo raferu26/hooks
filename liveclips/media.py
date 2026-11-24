@@ -105,9 +105,31 @@ def probe(path):
         if not math.isfinite(fps) or not 1 <= fps <= 240:fps=30.0
     except (ValueError,ZeroDivisionError):
         fps=30.0
-    return dict(duration=duration,width=int(video['width']),height=int(video['height']),
+    width,height=int(video['width']),int(video['height'])
+    rotation=_rotation(video);sar=_sar(video)
+    dw,dh=(height,width) if rotation in (90,270) else (width,height)   # exibição: depois da rotação e da proporção de pixel
+    dw=max(2,int(round(dw*sar/2))*2) if abs(sar-1)>1e-3 else dw
+    return dict(duration=duration,width=width,height=height,
                 fps=fps,has_audio=audio is not None,signature=json.dumps(key),video_codec=video.get('codec_name'),pix_fmt=video.get('pix_fmt'),
-                audio_codec=audio.get('codec_name') if audio else None)
+                audio_codec=audio.get('codec_name') if audio else None,rotation=rotation,sar=sar,display_width=dw,display_height=dh)
+
+
+def _rotation(video):
+    """Rotação da mídia em graus (0/90/180/270), pela matriz de exibição ou pela etiqueta `rotate`."""
+    value=None
+    for side in video.get('side_data_list') or []:
+        if 'rotation' in side:value=side['rotation']
+    if value is None:value=(video.get('tags') or {}).get('rotate')
+    try:return int(round(float(value)/90.0))*90%360 if value is not None else 0
+    except (TypeError,ValueError):return 0
+
+
+def _sar(video):
+    try:
+        a,b=str(video.get('sample_aspect_ratio') or '1:1').replace('/',':').split(':',1)
+        value=float(a)/float(b)
+        return value if math.isfinite(value) and .2<value<5 else 1.0
+    except (ValueError,ZeroDivisionError):return 1.0
 
 
 def audio_duration(path):
@@ -857,18 +879,27 @@ def blur_regions(profile):
 
 
 def final_video(profile,info,output_fps,duration,vsrc,punches,assets,look,ass,first_extra,reframe_plan,push_enabled,supersample=None,flash=None,
-                canvas=(1080,1920),layout=None,ass_name='legendas.ass',draft=False):
-    """Quadro final (padrão 1080x1920): layout, zoom por punch, cor, imagens e legendas."""
+                canvas=(1080,1920),layout=None,ass_name='legendas.ass',draft=False,composition=None):
+    """Quadro final (padrão 1080x1920): layout, zoom por punch, cor, imagens e legendas.
+
+    `composition`: composição de reação pronta (liveclips.composition) — substitui o enquadramento padrão e desliga o zoom
+    automático (que cortaria a webcam); só vale no quadro 9:16."""
     push=look.get('push') if push_enabled else None
     W,H=canvas;layout=resolve_layout(profile,layout,canvas);video=profile.get('content_mode','live')=='video'
-    if video or layout['mode']=='wide':
+    from . import composition as comp_module
+    reacao=bool(composition) and canvas==comp_module.CANVAS and comp_module.is_ready(composition)
+    if reacao:
+        filters=comp_module.video_graph(composition,info.get('display_width',info['width']),info.get('display_height',info['height']),
+                                        source=vsrc,fps=output_fps,canvas=canvas,sar=info.get('sar_fix',1.0),draft=draft)
+        punches=[];push=None
+    elif video or layout['mode']=='wide':
         mode=layout['mode'] if layout['mode'] in VIDEO_LAYOUTS else 'fit'
         filters=video_filters(output_fps,info,reframe_plan,source=vsrc,canvas=canvas,mode=mode,focus=layout['focus'],draft=draft)
     else:
         filters=live_filters(profile,info,punches,look,output_fps,duration,push,supersample,canvas,layout,vsrc)
     if draft:filters=filters.replace('flags=lanczos','flags=bilinear')   # rascunho 540x960: reamostragem mais barata
     visual='base'
-    if (video or layout['mode']=='wide') and (punches or push):
+    if not reacao and (video or layout['mode']=='wide') and (punches or push):
         effect=camera_zoom_filter(punches,output_fps,width=W,height=H,curve=look.get('curve','smooth'),
                                   push=push,duration=duration,supersample=supersample).lstrip(',')
         if effect:filters+=f';[{visual}]{effect}[styled]';visual='styled'
@@ -1352,6 +1383,11 @@ def _overrides_of(candidate):
     return value if isinstance(value,dict) else {}
 
 
+def composition_ready(comp,canvas):
+    from . import composition
+    return bool(comp) and tuple(canvas)==composition.CANVAS and composition.is_ready(comp)
+
+
 def _render_single(candidate,transcript,scratch,target,output,applied_cuts,look,meta,variant=None):
     """Uma única codificação: trims + concat + layout + cor + legendas + áudio no mesmo filtergraph.
 
@@ -1373,6 +1409,8 @@ def _render_single(candidate,transcript,scratch,target,output,applied_cuts,look,
     height=max(2,round(first['height']*width/first['width']/2)*2) if multi else first['height']
     has_audio=any(item['has_audio'] for item in infos) or bool(meta.get('external_audio'))
     info=dict(width=width,height=height,fps=first.get('fps',30),has_audio=has_audio,duration=duration)
+    if multi:info.update(display_width=width,display_height=height)      # fontes unidas já chegam normalizadas (setsar=1)
+    else:info.update(display_width=first['display_width'],display_height=first['display_height'],sar_fix=first['sar'])
     output_fps=60 if info['fps']>=50 and not draft else 30
     if not variant and not draft:_attach_plan(candidate,parts,pieces,duration,output_fps,canvas,project,teaser_count,meta)
     punches=retime_points(punches_for(candidate),remap)
@@ -1392,7 +1430,8 @@ def _render_single(candidate,transcript,scratch,target,output,applied_cuts,look,
     ass=_write_captions(candidate,profile,transcript,duration,remap,punches,look,target,scratch,titles=titles,teaser=teaser,
                         canvas=canvas,name=name,deliver=variant is None,root=meta.get('root'),text=not draft)
     reframe_plan=[]
-    if canvas==(1080,1920) and profile.get('content_mode','live')=='video' and profile.get('auto_reframe',True) \
+    reacao=composition_ready((project or {}).get('composition'),canvas)
+    if not reacao and canvas==(1080,1920) and profile.get('content_mode','live')=='video' and profile.get('auto_reframe',True) \
             and profile.get('reframe_mode','conservative') in ('dynamic','speaker','rastreio'):
         cursor=0.0
         for index,a,b,rate,hold,*_ in pieces:
@@ -1414,7 +1453,7 @@ def _render_single(candidate,transcript,scratch,target,output,applied_cuts,look,
     layout=(project or {}).get('layout')
     video_graph,visual=final_video(profile,info,output_fps,duration,source_label,punches,assets,look,ass,indexed,
                                    reframe_plan,push_enabled,supersample=1 if draft else None,flash=lead if teaser else None,
-                                   canvas=canvas,layout=layout,ass_name=name,draft=draft)
+                                   canvas=canvas,layout=layout,ass_name=name,draft=draft,composition=(project or {}).get('composition'))
     if draft:
         video_graph+=f';[{visual}]scale=540:960:flags=fast_bilinear,setsar=1[draft]';visual='draft'
     graph=[source_filters,video_graph];audio_map=[]
@@ -1464,6 +1503,7 @@ def _render_legacy(candidate,transcript,scratch,target,output,applied_cuts,look,
     Não aplica a abertura (teaser); o manifesto registra `teaser_skipped`."""
     meta=meta if meta is not None else {}
     if project_of(candidate) and (project_of(candidate) or {}).get('teaser'):meta['teaser_skipped']=True
+    if composition_ready((project_of(candidate) or {}).get('composition'),(1080,1920)):meta['composition_skipped']=True   # o método antigo não monta a composição de reação
     profile=candidate['profile'];threads=profile['threads']
     source,offset,duration=assemble(candidate['parts'],scratch,threads)
     source,offset,duration=compact_source(source,offset,duration,applied_cuts,scratch,threads)

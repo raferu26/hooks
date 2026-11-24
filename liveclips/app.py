@@ -20,6 +20,7 @@ from . import buildinfo,deps,__version__,agents,analytics,assets,brand,denoise,g
 from . import engine as engine_module
 from .captions import STYLE_NAMES,caption_terms,lines_from_transcript
 from . import project as project_module
+from . import composition as composition_module
 from .capture import CaptureManager
 from .editorial import audit,source_info
 from .engine import Engine
@@ -398,6 +399,7 @@ class App:
                 return dict(started=True)
             if path=='/api/project/get':return self.project_get(payload['id'])
             if path=='/api/project/save':return self.project_save(payload)
+            if path=='/api/composition/resolve':return self.composition_resolve(payload)
             if path=='/api/performance/save':
                 item=s.candidate(payload['id']);perf=s.save_performance(item['id'],payload)
                 return dict(performance=perf,summary=s.learning_summary(item['streamer']))
@@ -666,9 +668,46 @@ class App:
                          title_styles=list(project_module.TITLE_STYLES),layouts=list(project_module.LAYOUTS),
                          pip_corners=list(project_module.PIP_CORNERS),formats=list(project_module.FORMATS),
                          speed_range=list(project_module.SPEED_RANGE),freeze_range=list(project_module.FREEZE_RANGE),
-                         quality_modes=quality_catalog()),
+                         quality_modes=quality_catalog(),composition=composition_module.catalog()),
             images=assets.library(s.root),performance=data.get('performance'),
             camera=bool(profile.get('camera_rect')),encoder=profile.get('video_encoder','cpu'))
+
+    def _source_dims(self,item):
+        """Dimensões de EXIBIÇÃO (rotação e proporção de pixel aplicadas) do primeiro trecho do corte."""
+        part=item['parts'][0];path=Path(part['path'])
+        key=(str(path),path.stat().st_mtime_ns if path.exists() else 0)
+        cache=self.__dict__.setdefault('_dims_cache',{})
+        if key not in cache:
+            info=media.probe(path);cache[key]=(info['display_width'],info['display_height'])
+        return cache[key]
+
+    def composition_resolve(self,payload):
+        """Camadas da composição de reação (as MESMAS que o render usa) para a interface desenhar a prévia imediata."""
+        from . import composition
+        item=self.store.candidate(payload['id']);SW,SH=self._source_dims(item)
+        comp=composition.clean(payload.get('composition'))
+        return dict(plan=composition.resolve(comp,SW,SH) if comp else None,source=[SW,SH],composition=comp,summary=composition.summary(comp))
+
+    def source_frame(self,key,at):
+        """Quadro do vídeo ORIGINAL (sem o recorte 9:16) no instante `at` (s do corte), para marcar as regiões."""
+        item=self.store.candidate(key);at=max(0.0,float(at or 0))
+        cursor=0.0;chosen=None
+        for part in item['parts']:
+            length=float(part['out'])-float(part['in'])
+            if at<cursor+length or part is item['parts'][-1]:
+                chosen=(part,float(part['in'])+min(max(0.0,at-cursor),max(0.0,length-.05)));break
+            cursor+=length
+        part,local=chosen;info=media.probe(part['path'])
+        folder=self.store.root/'cache'/'quadros_origem';folder.mkdir(parents=True,exist_ok=True)
+        name=hashlib.sha1(f"{part['path']}|{round(local,2)}|{Path(part['path']).stat().st_mtime_ns}".encode()).hexdigest()[:20]+'.jpg'
+        target=folder/name
+        if not target.exists():
+            chain=[]
+            if abs(info['sar']-1)>1e-3:chain.append(f"scale=trunc(iw*{info['sar']:.6f}/2)*2:ih")
+            chain+=["scale='min(iw,1920)':-2"]
+            media.run([media.tool('ffmpeg'),'-nostdin','-hide_banner','-loglevel','error','-y','-ss',f'{local:.3f}','-i',str(part['path']),
+                       '-frames:v','1','-vf',','.join(chain),'-q:v','3',str(target)],90)
+        return target
 
     def project_save(self,payload):
         s=self.store;item=s.candidate(payload['id']);version=int(payload['version'])
@@ -983,6 +1022,7 @@ class App:
         return dict(item=found[0])
 
     def media_file(self,kind,key,n=None):
+        if kind=='srcframe':return self.source_frame(key,n)
         if kind=='music':return music.path_of(self.store.root,key)
         if kind=='image':return assets.path_of(self.store.root,key)
         if kind=='frame':path=self.store.session(key)['frame_path']
@@ -1059,9 +1099,9 @@ def handler_for(app):
                     query=parse_qs(url.query);kind=url.path.rsplit('/',1)[-1]
                     if kind=='style-demo':file=app.style_demo(query.get('style',[''])[0])
                     else:
-                        if kind not in ('preview','export','frame','music','image','sample'):raise ValueError('Mídia inválida.')
-                        file=app.media_file(kind,query.get('id',[''])[0],query.get('n',['1'])[0] if kind=='sample' else None)
-                    kinds={'frame':'image/jpeg','sample':'image/jpeg','music':'audio/mp4','image':{'.png':'image/png','.webp':'image/webp'}.get(file.suffix,'image/jpeg')}
+                        if kind not in ('preview','export','frame','music','image','sample','srcframe'):raise ValueError('Mídia inválida.')
+                        file=app.media_file(kind,query.get('id',[''])[0],query.get('n',['1'])[0] if kind=='sample' else query.get('t',['0'])[0] if kind=='srcframe' else None)
+                    kinds={'frame':'image/jpeg','sample':'image/jpeg','srcframe':'image/jpeg','music':'audio/mp4','image':{'.png':'image/png','.webp':'image/webp'}.get(file.suffix,'image/jpeg')}
                     return self.send_file(file,kinds.get(kind,'video/mp4'))
                 return self.respond(404,dict(error='Página não encontrada.'))
             except (ValueError,KeyError,OSError,RuntimeError) as exc:return self.respond(400,dict(error=str(exc)))
