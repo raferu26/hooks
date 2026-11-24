@@ -409,6 +409,7 @@ class App:
                 terms=s.accept_term(payload['streamer'],payload.get('term',''))
                 return dict(learned_terms=terms,details=self.learning_details(payload['streamer']))
             if path=='/api/captions/from-text':return self.captions_from_text(payload)
+            if path=='/api/captions/from-file':return self.captions_from_file(payload)
             if path=='/api/captions/refine':
                 s.candidate(payload['id']);self.engine.queue_refine(payload['id'],payload.get('model') or None)
                 return dict(ok=True)
@@ -864,6 +865,20 @@ class App:
         for part in parts:
             db,step=technical.envelope(part['path'],part['in'],part['out']-part['in']);dbs.append(db)
         return (np.concatenate(dbs) if dbs else np.zeros(0,dtype=np.float32)),step
+
+    def captions_from_file(self,payload):
+        """Legenda do corte a partir de um arquivo SRT/VTT/ASS do usuário. `relative`: os tempos do arquivo começam no início do CORTE; senão são
+        tempos da gravação inteira e só o trecho do corte é aproveitado. Tempos vêm do arquivo (não são estimados). Não grava nada."""
+        from . import subtitles
+        item=self.store.candidate(payload['id']);start,end=float(item['start']),float(item['end'])
+        found=subtitles.parse(str(payload.get('content') or '').encode('utf-8'),str(payload.get('name') or 'legenda.srt'))
+        if payload.get('relative'):
+            rows=[dict(x,start=max(0.0,x['start']),end=min(end-start,x['end'])) for x in found if x['start']<end-start]
+        else:
+            rows=subtitles.window(found,start,end)
+        lines=[dict(start=round(x['start'],3),end=round(x['end'],3),text=x['text'],words=[]) for x in rows if x['end']>x['start']]
+        if not lines:raise ValueError('Nenhuma fala desse arquivo cai dentro deste corte. Se os tempos começam no início do corte, marque essa opção.')
+        return dict(lines=lines,warnings=[],timing='arquivo',duration=round(end-start,3),speech=[])
 
     def captions_from_text(self,payload):
         """Legenda do corte a partir do texto do usuário (sem reconhecimento de fala). Devolve linhas no formato do Estúdio (tempos em

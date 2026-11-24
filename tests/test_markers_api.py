@@ -88,6 +88,20 @@ class MarkersApi(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.app.action('/api/captions/from-text', dict(id=item['id'], text='   '))
 
+    def test_captions_from_file_windows_the_recording_or_uses_clip_relative_times(self):
+        item, _ = candidate(self.app.store, self.sid, 10, 30)
+        srt = '1\n00:00:12,000 --> 00:00:15,000\nDentro do corte\n\n2\n00:01:00,000 --> 00:01:02,000\nFora do corte\n'
+        r = self.app.action('/api/captions/from-file', dict(id=item['id'], name='a.srt', content=srt))
+        self.assertEqual([l['text'] for l in r['lines']], ['Dentro do corte'])
+        self.assertEqual((r['lines'][0]['start'], r['lines'][0]['end']), (2.0, 5.0))              # relativo ao início do corte
+        self.assertEqual(r['timing'], 'arquivo')
+        rel = self.app.action('/api/captions/from-file', dict(id=item['id'], name='a.srt', content='1\n00:00:01,000 --> 00:00:03,000\nJá relativo\n', relative=True))
+        self.assertEqual((rel['lines'][0]['start'], rel['lines'][0]['end']), (1.0, 3.0))
+        with self.assertRaises(ValueError):
+            self.app.action('/api/captions/from-file', dict(id=item['id'], name='a.srt', content='1\n00:05:00,000 --> 00:05:02,000\nLonge\n'))
+        with self.assertRaises(ValueError):
+            self.app.action('/api/captions/from-file', dict(id=item['id'], name='a.exe', content=srt))
+
     def test_captions_from_text_with_taps_uses_them(self):
         item, _ = candidate(self.app.store, self.sid, 10, 30)
         with mock.patch('liveclips.technical.envelope', return_value=self._speech_env()):

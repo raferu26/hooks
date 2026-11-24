@@ -157,3 +157,9 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 - **TESTE:** e2e (11 checagens: abre pelo Ctrl+K, aviso de não-transcrição, 3 frases distribuídas, tempos estimados, correção na lista, desfazer, arrastar bloco com palavras, barra de toques, 3 toques gravados, início das frases = toques ±0,06 s, rótulo "marcado por você"); `test_markers_api` (+2: sem gravar, toques); `test_captions_text` (12). e2e completo sem falhas.
 - **Não validado:** fala **real** (erro de tempo em ms do alinhamento por energia); áudio sem pausas só distribui proporcionalmente; texto que não corresponde ao áudio gera legenda errada (o app só avisa por sílabas/segundo); tempos por palavra não editáveis individualmente (frase inteira).
 - **Pendente:** exibir no Estúdio a curva de energia/pausas como régua visual; editar palavras individualmente na timeline.
+
+## [Legenda por texto: importar legenda pronta e editar frase a frase] — 24/11/2026 (PR #3, rascunho)
+- **ANTES:** só colar texto/`.txt`; a lista de frases mostrava apenas o início.
+- **ALTERAÇÃO:** "Abrir texto ou legenda (.txt .srt .vtt .ass)": legenda pronta entra **com os tempos do arquivo** (rotulada "IMPORTADOS", não estimados), com a opção "tempos do arquivo começam neste corte" (`/api/captions/from-file`, sem gravar); a lista passa a mostrar, por frase, **início, fim, texto, dividir (✂), unir com a próxima (⤓) e excluir (✕)**, tudo no desfazer; só cria passo de desfazer se o valor mudou.
+- **TESTE:** e2e +8 checagens (fim ajustado com palavras reescaladas, texto corrigido, dividir, unir, excluir, desfazer de 5 ações, SRT com tempos do arquivo e rótulo); `test_markers_api` +1 (janela da gravação × tempos relativos ao corte; arquivo fora do corte e extensão inválida recusados). e2e completo sem falhas.
+- **Não feito:** tempo individual por palavra; ASS com karaoke (`\k`) não vira palavras; texto SRT multilinha vira uma frase.
