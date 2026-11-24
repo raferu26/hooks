@@ -237,6 +237,21 @@ with sync_playwright() as p:
     srv = pg.evaluate("api('/api/project/get',{id:ST.id}).then(d=>d.timing.final_duration)")
     check('duracao_final_igual_ao_servidor', abs(srv - est['final']) < .12, [srv, est['final']])
     pg.evaluate("mutate(()=>{ST.proj.cuts=[]})"); pg.wait_for_timeout(200)
+    # inspetor contextual: cada seleção mostra só as ferramentas daquele elemento (uma ficha, poucos controles) e o estado sem seleção não mostra ficha
+    pg.evaluate("ST.proj.cuts=[];ST.proj.zooms=[{id:'zi',start:1,end:3,zoom:1.2,curve:'smooth'}];ST.proj.titles=[{id:'ti',text:'Oi',start:1,end:3,style:'big',position:'top',color:'#ffffff'}];ST.proj.speeds=[{id:'si',start:4,end:6,rate:1.5}];ST.proj.freezes=[{id:'fi',at:7,duration:1}];ST.proj.cuts=[{_k:'ci',start:8,end:9}];ST.sel=null;ST.item=null;drawAll()")
+    insp = {}
+    for nome, it in (('Zoom', "{kind:'zoom',id:'zi'}"), ('Título', "{kind:'title',id:'ti'}"), ('Cortar', "{kind:'cut',k:'ci'}"), ('Velocidade', "{kind:'speed',id:'si'}"), ('Congelar', "{kind:'freeze',id:'fi'}")):
+        r = pg.evaluate("(it)=>{ST.item=it;ST.sel=null;drawRight();const f=document.querySelectorAll('#stRight .insp-item');return {fichas:f.length,rotulo:f[0]?f[0].querySelector('b').textContent:'',controles:f[0]?f[0].querySelectorAll('button,input,select,textarea').length:0,secoes:document.querySelectorAll('#stRight [data-sec]').length}}".replace('(it)=>', '()=>').replace('ST.item=it', 'ST.item=' + it))
+        insp[nome] = r
+        check(f'inspetor_{nome.lower()}_uma_ficha_poucos_controles', r['fichas'] == 1 and 0 < r['controles'] <= 14 and r['secoes'] >= 6, r)
+    pg.evaluate("ST.item=null;ST.sel={a:2,b:5};drawRight()")
+    r = pg.evaluate("({fichas:document.querySelectorAll('#stRight .insp-item').length,sel:!!document.querySelector('#stRight .sel-card')})")
+    insp['Trecho'] = r; check('inspetor_trecho_mostra_acoes_do_trecho', r['sel'], r)
+    pg.evaluate("ST.item=null;ST.sel=null;drawRight()")
+    r = pg.evaluate("({fichas:document.querySelectorAll('#stRight .insp-item').length,secoes:document.querySelectorAll('#stRight [data-sec]').length})")
+    insp['Nada'] = r; check('inspetor_sem_selecao_sem_ficha', r['fichas'] == 0 and r['secoes'] >= 6, r)
+    res['inspetor_contextual'] = insp
+    pg.evaluate("ST.proj.zooms=[];ST.proj.titles=[];ST.proj.speeds=[];ST.proj.freezes=[];ST.proj.cuts=[];drawAll()")
     # seletor de qualidade
     modes = pg.evaluate("[...document.querySelectorAll('#stQuality option')].map(o=>o.value)")
     check('quatro_modos_no_exportar', modes == ['rapido', 'equilibrado', 'qualidade', 'entrega'], modes)

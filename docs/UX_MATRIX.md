@@ -19,3 +19,6 @@ Evidência = leitura do código (`ui/`) e e2e `ui/e2e10.py` (1440×900, Linux, m
 | N4 | Autosave ensinava | **Resolvido** | `learn=False` | `test_salvar_previa` | — |
 | N5 | Redesenho completo | **Melhorado**: arrasto 60→0 redesenhos, p95 18→0,8 ms (500 itens); ações discretas ainda redesenham (8/16 ms) | `validacao/bench_ui.py` | bench + e2e | Redesenho parcial em ações discretas; V09 (90 s) |
 | N6 | Ctrl+Enter sem confirmação | **Resolvido** | 2º Ctrl+Enter em 2,5 s | e2e `ctrl_enter_pede_confirmacao` | — |
+
+## Inspetor contextual — verificação por seleção (e2e `inspetor_*`, 24/11/2026)
+Cada seleção abre **uma só ficha** com 14 controles ou menos, e as seções recolhidas continuam disponíveis; sem seleção não há ficha; trecho selecionado mostra as ações do trecho (cortar, zoom, título…). Testado para: zoom, título, corte manual, velocidade, imagem congelada, trecho e nenhum. **Não coberto no e2e:** imagem, efeito sonoro e abertura (precisam de arquivo/dados que o seed não tem). Isto confere a estrutura, **não** a facilidade de uso (pessoas).
