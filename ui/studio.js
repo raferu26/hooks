@@ -76,17 +76,18 @@ window.studioTick=async()=>{if(!ST.open||ST.busy||ST.saving)return;const c=state
  const sig=c.preview_status+':'+c.preview_version+':'+c.version;if(sig!==ST.pvSig){ST.pvSig=sig;await syncPreview()}}
 
 /* ───── transcrição ───── */
-function drawLeft(){const el=$('stLeft'),top=el.scrollTop;const d=ST.data;let html='';
+function drawLeft(){const el=$('stLeft'),top=el.scrollTop;const d=ST.data;let html='';const cutsNow=allCuts(),inCutNow=(a,b)=>cutsNow.some(c=>a>=c.start-.02&&b<=c.end+.02);   /* cortes calculados uma vez por desenho, não por palavra */
+ const memo=JSON.stringify([ST.lines,cutsNow,ST.sel,ST.anchor,ST.edit,(d.vocabulary_fixes||[]).length]);if(el.dataset.memo===memo&&el.firstChild)return;   /* nada que a fala mostra mudou (ex.: zoom, título, velocidade): não refaz o DOM */
  html+=`<h3 aria-level="2">Fala e legendas</h3><p class="help" style="padding:0 14px">Clique numa palavra para marcar. Shift+clique estende. Depois use <b>Cortar</b>, <b>Zoom</b> ou <b>Título</b>.</p>`;
  if(d.vocabulary_fixes&&d.vocabulary_fixes.length)html+=`<p class="help" style="padding:0 14px"><span class="chip info">${d.vocabulary_fixes.length} nome${d.vocabulary_fixes.length>1?'s':''} corrigido${d.vocabulary_fixes.length>1?'s':''} pelo dicionário</span></p>`;
  html+='<div class="lines" id="lines">';
  ST.lines.forEach((l,i)=>{if(ST.edit===i){html+=`<div class="line edit"><span class="tc">${clock(l.start,1)}</span><div><textarea id="lineText" rows="2">${esc(l.text)}</textarea><div class="row" style="margin-top:6px"><button class="small primary" data-lsave="${i}">Salvar</button><button class="small" data-lcancel>Cancelar</button><button class="small quiet" data-lmerge="${i}" ${i===ST.lines.length-1?'disabled':''}>Juntar com a próxima</button><button class="small quiet danger" data-ldel="${i}">Apagar legenda</button></div></div></div>`;return}
   const ws=(l.words&&l.words.length?l.words:[{start:l.start,end:l.end,word:l.text}]);
-  html+=`<div class="line" data-line="${i}"><span class="tc" data-seek="${l.start}">${clock(l.start,1)}</span><div>${ws.map((w,k)=>{const s=wordSel(i,k);return `<span class="w${inCut(w.start,w.end)?' cutw':''}${w.p!=null&&w.p<.5?' low':''}${s?' sel':''}" data-l="${i}" data-w="${k}" data-a="${w.start}" data-b="${w.end}">${esc(w.word)}</span> `}).join('')}<button class="quiet small" data-ledit="${i}" title="Editar texto" style="padding:0 6px">✎</button></div></div>`});
+  html+=`<div class="line" data-line="${i}"><span class="tc" data-seek="${l.start}">${clock(l.start,1)}</span><div>${ws.map((w,k)=>{const s=wordSel(i,k);return `<span class="w${inCutNow(w.start,w.end)?' cutw':''}${w.p!=null&&w.p<.5?' low':''}${s?' sel':''}" data-l="${i}" data-w="${k}" data-a="${w.start}" data-b="${w.end}">${esc(w.word)}</span> `}).join('')}<button class="quiet small" data-ledit="${i}" title="Editar texto" style="padding:0 6px">✎</button></div></div>`});
  if(!ST.lines.length)html+='<p class="help" style="padding:10px">Não há fala temporizada neste corte.</p>';
  html+='</div>';
  if(ST.sel)html+=`<div class="sel-bar"><span class="small">${clock(ST.sel.a,1)}–${clock(ST.sel.b,1)} (${(ST.sel.b-ST.sel.a).toFixed(1)}s) · ações no painel à direita · C corta</span><button class="small quiet" data-op="clear">Limpar</button></div>`;
- el.innerHTML=html;el.scrollTop=top}
+ el.innerHTML=html;el.dataset.memo=memo;el.scrollTop=top}
 function wordSel(i,k){const a=ST.anchor;if(!a||!a.end)return a&&a.l===i&&a.k===k;const [p,q]=[a.from,a.to];const pos=i*10000+k;return pos>=p&&pos<=q}
 function setWordSel(from,to){const f=Math.min(from.l*10000+from.k,to.l*10000+to.k),t=Math.max(from.l*10000+from.k,to.l*10000+to.k);const w=(l,k)=>{const L=ST.lines[l],W=(L.words&&L.words.length?L.words:[{start:L.start,end:L.end}])[k];return W};const A=w(Math.floor(f/10000),f%10000),B=w(Math.floor(t/10000),t%10000);ST.anchor={l:from.l,k:from.k,end:true,from:f,to:t};ST.sel={a:A.start,b:B.end};ST.item=null;drawLeft();drawTimeline();drawRight();seekClip(A.start)}
 let wdrag=null;
