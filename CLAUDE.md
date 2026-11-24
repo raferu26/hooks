@@ -51,3 +51,11 @@ Cada melhoria grande: ANTES → PROBLEMA → ALTERAÇÃO → TESTE → RESULTADO
 
 ## Documentos
 `docs/ARCHITECTURE.md` · `docs/ROADMAP.md` · `docs/CHANGELOG.md` · `docs/KNOWN_ISSUES.md` · `docs/UX_MATRIX.md` · `docs/SEM_IA_MIGRACAO.md` · `docs/BASELINE.md` (medições iniciais) · `docs/handoff/` (pacote histórico recebido: dossiê, inventário, decisões, perguntas em aberto).
+
+## Git e checkpoints (política permanente)
+- Remoto oficial: GitHub **privado** `raferu26/hooks` (`origin`). Nunca tornar público, nunca force push, nunca reescrever histórico (correção = commit novo). Não subir vídeos, bancos, perfis, `.env`, chaves ou tokens.
+- **Nada importante fica só no ambiente temporário:** envie checkpoints testados com frequência para a branch da funcionalidade (`git push -u origin feature/<nome>`).
+- Uma funcionalidade = uma branch (`feature/...`); commits pequenos com teste proporcional. `main` só recebe por Pull Request depois de testes relacionados e revisão do diff; não dar push direto de trabalho incompleto na `main`.
+- Antes de fechar uma versão beta: suíte completa registrada em `docs/BASELINE.md`/`CHANGELOG.md` (falhas incluídas) e novo bundle de backup: `git bundle create hooks-backup-AAAA-MM-DD.bundle --all` (+ `git bundle verify`).
+- Tags: a sessão em nuvem não consegue enviar tags (proxy 403); criar `baseline-0.19.0-beta.1` (commit `dc8e371`) fora da sessão.
+- Antes de `git commit` encadeado a scripts, confira que o passo anterior terminou bem (um commit já subiu com resultados vazios por isso).

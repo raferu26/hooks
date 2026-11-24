@@ -28,7 +28,7 @@ Todas as verificações passaram, sem erro de console. Medidas: abrir Estúdio *
 | 200 | 7,7 / 11,3 / 14,0 | 6,6 / 8,1 | 15,6 KB | 1854 |
 | 500 | 14,1 / 24,0 / 25,1 | 15,1 / 27,1 | 35 KB | 2754 |
 (Clipe de 14,5 s; heap JS 4–12 MB.) Meta do roadmap (<16 ms/quadro com 200 blocos): **atendida em p95 (11,3)**, **não** com 500 (p95 24). Custo cresce ~linearmente com o número de itens (redesenho completo a cada ação).
-**Lacuna V09:** o clipe de 90 s com muitas palavras **não** foi medido — o seed longo (`HOOKS_SEED_LONG=1`) só rendeu um candidato de 25 s por deduplicação. Pendente.
+**V09 (clipe de 90 s) — medido em 24/11** (corte manual de 90 s, 46 linhas de fala ~270 palavras, `HOOKS_SEED_LONG=1`; ver §3b).
 
 ## 4. Modos de exportação (`validacao/medir_modos.py`, 4 s 1080×1920 sintético com ruído, CPU)
 | Modo | Tempo | kbps | SSIM | PSNR (dB) |
@@ -41,3 +41,12 @@ Confirma que os 4 modos **mudam o comando** (preset/CRF/aq-mode distintos). Dife
 
 ## 5. Pendências de validação física (lista permanente)
 Windows 10/11 (atalho, janela, `.bat`, encerramento) · NVENC/QSV/AMF · i7-3770 com 2–4 lives · vídeo real (tempos/qualidade) · YouTube real · OTIO em Premiere/Resolve/CapCut · legenda HTML × libass lado a lado · pessoas (iniciante/casual/experiente/máquina fraca) · clipe de 90 s (V09) · consumo de RAM/CPU em sessão longa · estabilidade prolongada.
+
+
+## 3b. Clipe de 90 s com muitas palavras (V09, após as otimizações de 24/11; ms, p50 / p95)
+| Cortes | mutate (editar cortes) | desfazer | edição sem tocar a fala (zoom): sem memo → com memo | snapshot | DOM | arrasto p95 |
+|---|---|---|---|---|---|---|
+| 100 | **5.65 / 7.1** | 5.1 / 6.6 | 8.1 / 15.4 → **3.9 / 7.8** | 18.9 KB | 1936 | 0.4 |
+| 200 | **6.65 / 10.5** | 5.9 / 10.7 | 8.4 / 15.3 → **5.6 / 9.8** | 25.1 KB | 2247 | 0.7 |
+| 500 | **13.65 / 20.5** | 11.65 / 19.2 | 15.1 / 21.2 → **10.5 / 14.8** | 44.0 KB | 3147 | 1.4 |
+(Corte manual de 90 s, 46 linhas de fala ~270 palavras, `HOOKS_SEED_LONG=1`.) Antes das otimizações, o perfil de `mutate` com 100 cortes mostrou `drawLeft` (lista de fala) = **6,2 ms de 11 ms**; o snapshot JSON de desfazer **não** é gargalo (0,08 ms). Com a lista de fala atualizada no lugar ao editar cortes, a coluna "mutate" ficou **≤ 16 ms no p95 até 200 cortes**; com 500 cortes (estresse irreal para 90 s) o p95 fica em ~20 ms. Medições têm ruído de ±30% entre execuções.

@@ -729,11 +729,20 @@ def voice_filters(profile,meta=None):
     return (','+','.join(chosen)) if chosen else ''
 
 
+def denoise_filter():
+    """Redução de ruído clássica (DSP, sem modelo): `afftdn` (como antes) seguido de wavelet adaptativo (`afwtdn`, 70%).
+    Em sinal sintético (ruído rosa + zumbido; clipes de 6 a 60 s) removeu de 6,0 a 9,7 dB a mais de ruído que só o `afftdn`, com a mesma
+    distorção da fala. O wavelet sozinho piorava clipes de ~6 s (ainda não aprendeu o ruído); por isso entra depois do `afftdn`.
+    Sem o `afwtdn` neste FFmpeg, fica só o `afftdn`. Medidas: validacao/medir_audio.py."""
+    base='afftdn=nr=12:nf=-45:tn=1'
+    return base+',afwtdn=adaptive=1:percent=70' if has_filter('afwtdn') else base
+
+
 def audio_chain(source,indexed,profile,duration,loudnorm,voice_clean=False,meta=None):
     """Voz (opcionalmente limpa) + música (com ducking e fades) + efeitos, terminando em [aout]."""
     base=f'[{source}]aresample=48000'
     if voice_clean=='neural':base+=',highpass=f=70,arnndn=m=rnnoise.rnnn:mix=.9'   # modelo copiado para a pasta de trabalho
-    elif voice_clean:base+=',highpass=f=70,afftdn=nr=12:nf=-45:tn=1'
+    elif voice_clean:base+=',highpass=f=70,'+denoise_filter()
     base+=voice_filters(profile,meta)
     filters=base+'[voice]';audio='voice';number=0
     for index,asset in indexed:
@@ -747,7 +756,7 @@ def audio_chain(source,indexed,profile,duration,loudnorm,voice_clean=False,meta=
             if asset.get('duck',True):
                 # Um rótulo de saída só pode ser consumido uma vez: divide a voz entre o detector e a mistura.
                 filters+=f';[{audio}]asplit=2[side{number}][keep{number}]'
-                filters+=f';[music{number}][side{number}]sidechaincompress=threshold=.06:ratio=8:attack=20:release=350[duck{number}]'
+                filters+=f';[music{number}][side{number}]sidechaincompress=threshold=.03:ratio=10:attack=15:release=400[duck{number}]'
                 filters+=f';[keep{number}][duck{number}]amix=inputs=2:duration=first:dropout_transition=0[mix{number}]'
             else:
                 filters+=f';[{audio}][music{number}]amix=inputs=2:duration=first:dropout_transition=0[mix{number}]'

@@ -69,3 +69,54 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 - **TESTE:** e2e `snap_*` (resultado final idêntico: 3,29 s/3,3 s) + e2e completo sem falhas.
 - **RESULTADO:** redesenhos durante o arrasto **60 → 0**; p50/p95 **0,1/0,5 ms** (200) e **0,2/0,8 ms** (500) — de ~18 ms p95 para <1 ms (meta de 16 ms por quadro atendida também com 500 itens). Resultados em `validacao/bench_ui_depois_n5.json`.
 - **Não feito:** `mutate()` discreto ainda redesenha tudo (8 ms/200 e 16 ms/500, `drawLeft` 2–3 ms evitável); clipe de 90 s (V09) continua sem medição.
+
+## [Busca de ações — Ctrl+K] — 24/11/2026 (A04/E6)
+- **ANTES:** muitas ações só por atalho (que é preciso conhecer) ou escondidas em seções do inspetor; sem busca.
+- **ALTERAÇÃO** (`ui/studio.js`, `body.html`, `style.css`): **Ctrl+K** (ou botão ⌕ na barra) abre uma busca no Estúdio com ~30 ações: cortar/zoom/título no trecho, desfazer/refazer, salvar, prévia, reproduzir, navegar entre cortes, recolher a timeline, zonas seguras, abrir qualquer seção do inspetor, atalhos, voltar. Lista **só o que vale agora** (ex.: "Cortar" some sem seleção); ignora acentos e maiúsculas; ↑↓ Enter Esc; mostra o atalho de cada ação. "Exportar" não executa direto: leva o foco ao botão para manter a confirmação (N6).
+- **TESTE:** e2e `cmdk_*` (6 verificações) + e2e completo sem falhas/erros de console; `test_interface`, `test_design_tokens`, `test_http` OK.
+- **Não feito:** ações do fluxo de legendas/estilos por nome; histórico de ações recentes; teste com pessoas (a descoberta do Ctrl+K depende do botão ⌕ e do diálogo `?`).
+
+## [Guia visual do snap] — 24/11/2026 (A03)
+- **ANTES:** o alinhamento magnético funcionava mas era invisível: o usuário não sabia a que o item grudou.
+- **ALTERAÇÃO** (`ui/studio.js`, `style.css`): linha vertical ciana no instante do alvo enquanto o item está alinhado (some ao soltar ou com Alt). Move/redimensiona rastreia qual borda (início ou fim) alinhou.
+- **TESTE:** e2e `guia_aparece_ao_alinhar` (guia em 4,00 s ±0,05) e `guia_some_ao_soltar`; snap e Alt continuam OK; benchmark de arrasto mantido (<1 ms p95 com 200 itens).
+
+## [Lista de fala sem redesenho desnecessário + medição de 90 s] — 24/11/2026 (N5/V09)
+- **ANTES (clipe de 90 s, 100 cortes):** `mutate` ≈ 11 ms; **`drawLeft` 6,2 ms** (lista de ~270 palavras refeita a cada ação; `allCuts()` recalculado por palavra); `drawTimeline` 3,6 ms; snapshot 0,08 ms.
+- **ALTERAÇÃO** (`ui/studio.js`): cortes calculados 1× por desenho; **memorização** da lista de fala (chave = linhas, cortes, seleção, âncora, edição); se nada que a fala mostra mudou (zoom, título, velocidade…), o DOM não é refeito.
+- **TESTE:** e2e `fala_risca_palavras_cortadas` e `fala_desfazer_limpa_risco` (a memória não fica velha); e2e completo sem falhas; `test_interface`, `test_design_tokens`, `test_http` OK; `bench_ui.py` mede `mutate_zoom` com/sem memo.
+- **RESULTADO:** ver `docs/BASELINE.md` §3b (valores medidos; edição de zoom com 100 cortes: p50/p95 8,1/13,2 → 4,2/8,1 ms na medição de perfil).
+- **Lacunas:** editar cortes/seleção ainda refaz a fala; sem virtualização; Linux/sintético, sem máquina fraca.
+- **Nota de processo:** o commit anterior desta etapa (`5d2af4a`) subiu sem a atualização de docs e com os JSON de benchmark vazios por falha de um servidor de teste; corrigido neste commit seguinte (sem reescrever histórico).
+
+## [Fala: atualizar o risco no lugar ao editar cortes] — 24/11/2026 (N5)
+- **ANTES:** editar cortes refazia a lista de fala inteira (~270 palavras): mutate p50/p95 = 8,5/13 ms (100 cortes) e 15,4/19 ms (200 cortes) no clipe de 90 s.
+- **ALTERAÇÃO** (`ui/studio.js`): se só os cortes mudaram (linhas, seleção, âncora, edição iguais), troca a classe `cutw` das palavras existentes sem recriar o DOM.
+- **TESTE:** e2e `fala_nao_refaz_lista_ao_cortar`, `fala_atualiza_risco_no_lugar`, `fala_desfaz_risco_no_lugar` (+ os anteriores) e e2e completo sem falhas.
+- **RESULTADO:** mutate p50/p95 **5,7/7,1 ms (100 cortes)**, **6,7/10,5 ms (200)**, 13,7/20,5 ms (500). Tabela em `docs/BASELINE.md` §3b.
+- **Lacuna:** mudar a seleção de palavras ainda recria a lista; sem virtualização.
+
+## [Ctrl+K: ordenação por relevância + medidor de eficiência] — 24/11/2026 (A04)
+- **ANTES (`validacao/medir_ctrlk.py`, 31 ações):** menor nº de letras para a ação ser a 1ª da lista: média **2,2**; 28/31 em ≤3 letras; **"Abrir seção: Legendas" nunca era a primeira** (perdia para "Ligar/desligar legendas ao vivo").
+- **ALTERAÇÃO** (`ui/studio.js`): ordem = nome começa com a busca → palavra começa com a busca → contém; empate pelo nome mais curto.
+- **TESTE:** e2e `cmdk_*` (7) e e2e completo sem falhas.
+- **RESULTADO:** média **1,6 letras**; **31/31** em ≤3 letras (Ctrl+K + 1–3 letras + Enter = 4–6 teclas); nenhuma ação inalcançável como 1ª.
+- **Não medido:** descoberta pelo usuário (depende do botão ⌕ e do diálogo `?`); comparação de cliques com a navegação por mouse; pessoas.
+
+## [Áudio clássico: limpeza de ruído híbrida e ducking mais firme] — 24/11/2026 (qualidade de áudio, sem IA)
+- **ANTES (`validacao/medir_audio.py`, sinal sintético com referência limpa):** limpeza leve = passa-alta + `afftdn` (piso −48,2 dBFS em 24 s); ducking da música **3,9 dB** (limiar −24 dBFS ficava acima das falas baixas); consistência de volume com preset `off`: VOL σ 2,8 dB.
+- **ALTERAÇÃO** (`liveclips/media.py`): `denoise_filter()` = `afftdn` + `afwtdn` adaptativo 70% (fallback só `afftdn` se o FFmpeg não tiver `afwtdn`); `sidechaincompress` thr .06/ratio 8/20·350 ms → **thr .03/ratio 10/15·400 ms**. Nenhum modelo, nenhuma dependência nova. RNNoise permanece como estava (plano de saída em `SEM_IA_MIGRACAO.md`).
+- **TESTE:** `tests/test_audio_dsp.py` (4: ruído ≥4 dB melhor sem piorar a fala, fallback, queda do ducking ≥6 dB, pico ≤ −1 dBTP) + 59 testes relacionados OK (`test_pro_audio`, `test_voice_chain`, `test_ligacao_modulos`, `test_modos_qualidade`, `test_corpus_cortes`, `test_audio_dsp`; 2 ignorados por modelo RNNoise não baixado).
+- **RESULTADO:** piso de ruído **−48,2 → −53,4 dBFS** em 24 s (híbrido removeu 6,0/6,0/9,1/9,7 dB a mais em 6/12/24/60 s), SDR da fala igual (±0,05), +0,04 s de processamento por 24 s de áudio; ducking **3,9 → 7,3 dB**; pico verdadeiro ≤ −1,5 dBTP. Detalhes e limites em `docs/AUDIO.md`.
+- **Achado/decisão pendente:** preset de voz `natural` reduz VOL σ de 2,8 para 1,0 dB; hoje o padrão é `off`.
+- **Não validado:** fala real, ruído não estacionário, Windows (versão do FFmpeg), percepção por pessoas.
+
+## [Fidelidade prévia × exportação final — medição] — 24/11/2026
+- **Medição** (corte de 28 s, vídeo sintético, modo Equilibrado, CPU): SSIM do final (1080×1920 reduzido a 540×960) contra o **rascunho novo** = **0,9759**; contra o **rascunho antigo** (mesmo trecho, filtros de 0.19) = **0,9757**. A otimização do rascunho **não** reduziu a fidelidade ao arquivo final (diferença 0,0002). Tempos: prévia 6,5 s; exportação 35,1 s.
+- **Limites:** fonte sintética; legenda/título do final não aparecem no rascunho (a prévia usa legenda ao vivo em HTML — comparação lado a lado com libass segue pendente, V04); GPU não testada.
+
+## [Validação do PR #1] — 24/11/2026
+- **Suíte completa** na `feature/paleta-de-comandos` (commit `4230cc4`, Linux, Python 3.13, FFmpeg 6.1.1, OpenCV/yt-dlp/streamlink instalados): **1228 testes, 0 falhas, 0 erros, 4 ignorados** (2× RNNoise e 2× detector de rosto: modelos não baixados — componentes de ML do plano sem IA). Duração 41,6 min. Inclui `test_interface`, `test_design_tokens`, `test_http`, `test_audio_dsp`, `test_sem_ia_guard`, `test_deps` e `test_corpus_cortes`.
+- **Revisão do diff vs `main`:** 22 arquivos (+1051/−24); código Python alterado só em `liveclips/media.py` (+13/−3: `denoise_filter()` e parâmetros do `sidechaincompress`); o resto é interface (`ui/*` + `index.html` regenerado, que **confere byte a byte** com as fontes), testes, medidores, resultados JSON e docs.
+- **Arquivos sensíveis:** nenhum nome suspeito (token/segredo/credencial/.env/chaves/banco/vídeo/áudio/zip) e nenhum padrão de segredo (ghp_, github_pat_, AKIA, chave privada, sk-, Bearer) nas linhas adicionadas; sem `console.log`/`debugger`/TODO novos.
+- **Regressões:** nenhuma encontrada. Riscos conhecidos que **não** são cobertos: Windows, GPU, vídeo/áudio reais; a limpeza de ruído híbrida e o ducking mais firme só foram medidos em áudio sintético.

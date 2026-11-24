@@ -76,17 +76,20 @@ window.studioTick=async()=>{if(!ST.open||ST.busy||ST.saving)return;const c=state
  const sig=c.preview_status+':'+c.preview_version+':'+c.version;if(sig!==ST.pvSig){ST.pvSig=sig;await syncPreview()}}
 
 /* ───── transcrição ───── */
-function drawLeft(){const el=$('stLeft'),top=el.scrollTop;const d=ST.data;let html='';
+function drawLeft(){const el=$('stLeft'),top=el.scrollTop;const d=ST.data;let html='';const cutsNow=allCuts(),inCutNow=(a,b)=>cutsNow.some(c=>a>=c.start-.02&&b<=c.end+.02);   /* cortes calculados uma vez por desenho, não por palavra */
+ const base=JSON.stringify([ST.lines,ST.sel,ST.anchor,ST.edit,(d.vocabulary_fixes||[]).length]),cutKey=JSON.stringify(cutsNow);
+ if(el.dataset.base===base&&el.firstChild){   /* só os cortes mudaram: troca a classe das palavras no lugar, sem refazer a lista */
+  if(el.dataset.cuts!==cutKey){el.querySelectorAll('.w').forEach(s=>s.classList.toggle('cutw',inCutNow(+s.dataset.a,+s.dataset.b)));el.dataset.cuts=cutKey}return}   /* nada que a fala mostra mudou (ex.: zoom, título, velocidade): não refaz o DOM */
  html+=`<h3 aria-level="2">Fala e legendas</h3><p class="help" style="padding:0 14px">Clique numa palavra para marcar. Shift+clique estende. Depois use <b>Cortar</b>, <b>Zoom</b> ou <b>Título</b>.</p>`;
  if(d.vocabulary_fixes&&d.vocabulary_fixes.length)html+=`<p class="help" style="padding:0 14px"><span class="chip info">${d.vocabulary_fixes.length} nome${d.vocabulary_fixes.length>1?'s':''} corrigido${d.vocabulary_fixes.length>1?'s':''} pelo dicionário</span></p>`;
  html+='<div class="lines" id="lines">';
  ST.lines.forEach((l,i)=>{if(ST.edit===i){html+=`<div class="line edit"><span class="tc">${clock(l.start,1)}</span><div><textarea id="lineText" rows="2">${esc(l.text)}</textarea><div class="row" style="margin-top:6px"><button class="small primary" data-lsave="${i}">Salvar</button><button class="small" data-lcancel>Cancelar</button><button class="small quiet" data-lmerge="${i}" ${i===ST.lines.length-1?'disabled':''}>Juntar com a próxima</button><button class="small quiet danger" data-ldel="${i}">Apagar legenda</button></div></div></div>`;return}
   const ws=(l.words&&l.words.length?l.words:[{start:l.start,end:l.end,word:l.text}]);
-  html+=`<div class="line" data-line="${i}"><span class="tc" data-seek="${l.start}">${clock(l.start,1)}</span><div>${ws.map((w,k)=>{const s=wordSel(i,k);return `<span class="w${inCut(w.start,w.end)?' cutw':''}${w.p!=null&&w.p<.5?' low':''}${s?' sel':''}" data-l="${i}" data-w="${k}" data-a="${w.start}" data-b="${w.end}">${esc(w.word)}</span> `}).join('')}<button class="quiet small" data-ledit="${i}" title="Editar texto" style="padding:0 6px">✎</button></div></div>`});
+  html+=`<div class="line" data-line="${i}"><span class="tc" data-seek="${l.start}">${clock(l.start,1)}</span><div>${ws.map((w,k)=>{const s=wordSel(i,k);return `<span class="w${inCutNow(w.start,w.end)?' cutw':''}${w.p!=null&&w.p<.5?' low':''}${s?' sel':''}" data-l="${i}" data-w="${k}" data-a="${w.start}" data-b="${w.end}">${esc(w.word)}</span> `}).join('')}<button class="quiet small" data-ledit="${i}" title="Editar texto" style="padding:0 6px">✎</button></div></div>`});
  if(!ST.lines.length)html+='<p class="help" style="padding:10px">Não há fala temporizada neste corte.</p>';
  html+='</div>';
  if(ST.sel)html+=`<div class="sel-bar"><span class="small">${clock(ST.sel.a,1)}–${clock(ST.sel.b,1)} (${(ST.sel.b-ST.sel.a).toFixed(1)}s) · ações no painel à direita · C corta</span><button class="small quiet" data-op="clear">Limpar</button></div>`;
- el.innerHTML=html;el.scrollTop=top}
+ el.innerHTML=html;el.dataset.base=base;el.dataset.cuts=cutKey;el.scrollTop=top}
 function wordSel(i,k){const a=ST.anchor;if(!a||!a.end)return a&&a.l===i&&a.k===k;const [p,q]=[a.from,a.to];const pos=i*10000+k;return pos>=p&&pos<=q}
 function setWordSel(from,to){const f=Math.min(from.l*10000+from.k,to.l*10000+to.k),t=Math.max(from.l*10000+from.k,to.l*10000+to.k);const w=(l,k)=>{const L=ST.lines[l],W=(L.words&&L.words.length?L.words:[{start:L.start,end:L.end}])[k];return W};const A=w(Math.floor(f/10000),f%10000),B=w(Math.floor(t/10000),t%10000);ST.anchor={l:from.l,k:from.k,end:true,from:f,to:t};ST.sel={a:A.start,b:B.end};ST.item=null;drawLeft();drawTimeline();drawRight();seekClip(A.start)}
 let wdrag=null;
@@ -353,16 +356,19 @@ function drawTimeline(){if(!ST.open)return;const D=dur(),W=Math.ceil(D*ST.pps)+2
 function getItem(it){if(!it)return null;const P=ST.proj;if(it.kind==='cut')return P.cuts.find(c=>c._k===it.k);if(it.kind==='zoom')return P.zooms.find(z=>z.id===it.id);if(it.kind==='title')return P.titles.find(z=>z.id===it.id);if(it.kind==='teaser')return P.teaser;if(it.kind==='sfx')return P.sfx.find(e=>e.id===it.id);if(it.kind==='speed')return P.speeds.find(e=>e.id===it.id);if(it.kind==='freeze')return P.freezes.find(e=>e.id===it.id);if(it.kind==='image')return P.overlays.find(e=>e.id===it.id)}
 const tlX=e=>e.clientX-$('tl').getBoundingClientRect().left;
 /* Durante o arrasto só o bloco movido muda de lugar: evita reconstruir a linha do tempo inteira a cada pointermove (N5). Itens sem bloco (SFX/congelar) caem no redesenho completo. */
-function dragPaint(b,it,kind){if(b&&b.isConnected&&b.classList.contains('blk')&&kind!=='sfx'&&kind!=='freeze'){b.style.left=X(it.start)+'px';b.style.width=Math.max(6,X(it.end-it.start))+'px'}else drawTimeline()}
+function dragPaint(b,it,kind){if(b&&b.isConnected&&b.classList.contains('blk')&&kind!=='sfx'&&kind!=='freeze'){b.style.left=X(it.start)+'px';b.style.width=Math.max(6,X(it.end-it.start))+'px'}else drawTimeline();paintGuide()}
 function snapTargets(self){const P=ST.proj,t=[0,dur(),ST.cursor||0];for(const k of ['cuts','zooms','titles','speeds','overlays'])for(const x of P[k]||[])if(x!==self){t.push(x.start,x.end)}for(const k of ['sfx','freezes'])for(const x of P[k]||[])if(x!==self)t.push(x.at);return t}
 /* Alinha ao alvo mais próximo (cursor, bordas de outros itens, início/fim) até 8 px. Alt desliga. */
-function snapTo(v,self){const th=8/(ST.pps||1);let best=v,d=th;for(const x of snapTargets(self)){const k=Math.abs(x-v);if(k<d){d=k;best=x}}return best}
+const SNAP={hit:null};
+function snapTo(v,self){const th=8/(ST.pps||1);let best=v,d=th;SNAP.hit=null;for(const x of snapTargets(self)){const k=Math.abs(x-v);if(k<d){d=k;best=x;SNAP.hit=x}}return best}
+/* guia visual do alinhamento: linha vertical no instante do alvo, só enquanto arrasta */
+function paintGuide(){const tl=$('tl');if(!tl)return;let g=$('snapGuide');if(!g){g=document.createElement('div');g.id='snapGuide';g.className='snapguide';tl.appendChild(g)}if(SNAP.hit==null)g.style.display='none';else{g.style.left=X(SNAP.hit)+'px';g.style.display='block'}}
 $('tlScroll').addEventListener('pointerdown',e=>{
  const b=e.target.closest('[data-kind]');
  if(b){const kind=b.dataset.kind,key=b.dataset.key;ST.item=kind==='cut'?{kind,k:key}:{kind,id:key};const it=getItem(ST.item);ST.undo.push(snap());ST.redo=[];const orig={...it},t0=T_(tlX(e)),mode=e.target.classList.contains('l')?'l':e.target.classList.contains('r')?'r':'m';let moved=false;
   const move=ev=>{const dt=T_(tlX(ev))-t0;if(Math.abs(dt)>.02)moved=true;const q=v=>Math.round(v*20)/20;
-   const sn=v=>ev.altKey?v:snapTo(v,it);if(kind==='sfx'||kind==='freeze')it.at=clamp(sn(q(orig.at+dt)),0,dur());else{let a=orig.start,bb=orig.end;if(mode==='m'){const L=bb-a;a=q(a+dt);const sa=sn(a),sb=sn(a+L);if(sa!==a||sb!==a+L){a=(sa!==a&&(sb===a+L||Math.abs(sa-a)<=Math.abs(sb-a-L)))?sa:sb-L}a=clamp(a,0,dur()-L);bb=a+L}else if(mode==='l')a=clamp(sn(q(a+dt)),0,bb-.1);else bb=clamp(sn(q(bb+dt)),a+.1,dur());it.start=r2(a);it.end=r2(bb)}dragPaint(b,it,kind)};
-  const up=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);if(moved){changed();ST.proj.cuts.sort((a,b)=>a.start-b.start);ST.proj.zooms.sort((a,b)=>a.start-b.start);ST.proj.titles.sort((a,b)=>a.start-b.start);ST.proj.speeds.sort((a,b)=>a.start-b.start);ST.proj.freezes.sort((a,b)=>a.at-b.at);ST.proj.overlays.sort((a,b)=>a.start-b.start);drawAll()}else{ST.undo.pop();drawRight();drawTimeline();if(kind!=='sfx'&&kind!=='freeze')seekClip(it.start);else seekClip(it.at)}};
+   const sn=v=>{if(ev.altKey){SNAP.hit=null;return v}return snapTo(v,it)};if(kind==='sfx'||kind==='freeze')it.at=clamp(sn(q(orig.at+dt)),0,dur());else{let a=orig.start,bb=orig.end;if(mode==='m'){const L=bb-a;a=q(a+dt);const sa=sn(a),ha=SNAP.hit,sb=sn(a+L),hb=SNAP.hit;if(sa!==a||sb!==a+L){const useA=sa!==a&&(sb===a+L||Math.abs(sa-a)<=Math.abs(sb-a-L));a=useA?sa:sb-L;SNAP.hit=useA?ha:hb}else SNAP.hit=nulla=clamp(a,0,dur()-L);bb=a+L}else if(mode==='l')a=clamp(sn(q(a+dt)),0,bb-.1);else bb=clamp(sn(q(bb+dt)),a+.1,dur());it.start=r2(a);it.end=r2(bb)}dragPaint(b,it,kind)};
+  const up=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);SNAP.hit=null;if(moved){changed();ST.proj.cuts.sort((a,b)=>a.start-b.start);ST.proj.zooms.sort((a,b)=>a.start-b.start);ST.proj.titles.sort((a,b)=>a.start-b.start);ST.proj.speeds.sort((a,b)=>a.start-b.start);ST.proj.freezes.sort((a,b)=>a.at-b.at);ST.proj.overlays.sort((a,b)=>a.start-b.start);drawAll()}else{ST.undo.pop();drawRight();drawTimeline();if(kind!=='sfx'&&kind!=='freeze')seekClip(it.start);else seekClip(it.at)}};
   drawRight();
   document.addEventListener('pointermove',move);document.addEventListener('pointerup',up);e.preventDefault();return}
  if(e.target.closest('[data-seek]')){seekClip(+e.target.closest('[data-seek]').dataset.seek)}
@@ -436,7 +442,46 @@ $('auditOk').onchange=()=>$('auditGo').disabled=!$('auditOk').checked;
 $('auditGo').onclick=async()=>{$('confirmDialog').close();try{await doApprove(true)}catch(e){toast(e.message,true)}};
 async function doApprove(ok){const q=$('stQuality').value;await api('/api/review',{id:ST.id,version:ST.data.version,start:ST.start,end:ST.end,action:'approve',editorial_confirmed:ok,edit_overrides:ST.overrides,quality_mode:q});toast('Exportação na fila ('+($('stQuality').selectedOptions[0]?.textContent||q)+'). Acompanhe em Cortes → Na fila.');ST.dirty=false;ST.unlearned=false;await nextOrClose()}
 let approveArmed=0;
-const SHORTCUTS=[['Espaço','reproduzir / pausar'],['← →','voltar / avançar 1 s (Shift: 5 s)'],['C','cortar o trecho selecionado'],['Delete','remover o item selecionado'],['Esc','limpar seleção'],['Ctrl+Z / Ctrl+Shift+Z','desfazer / refazer'],['Ctrl+S','salvar agora (salva sozinho também)'],['P','atualizar a prévia'],['F','recolher/mostrar a linha do tempo (prévia maior)'],['[ ]','corte anterior / próximo'],['R','rejeitar'],['Ctrl+Enter (2×)','exportar'],['+ −','zoom da linha do tempo'],['Alt (ao arrastar)','desliga o alinhamento magnético'],['?','mostrar estes atalhos']];
+const SHORTCUTS=[['Espaço','reproduzir / pausar'],['← →','voltar / avançar 1 s (Shift: 5 s)'],['C','cortar o trecho selecionado'],['Delete','remover o item selecionado'],['Esc','limpar seleção'],['Ctrl+Z / Ctrl+Shift+Z','desfazer / refazer'],['Ctrl+S','salvar agora (salva sozinho também)'],['P','atualizar a prévia'],['F','recolher/mostrar a linha do tempo (prévia maior)'],['[ ]','corte anterior / próximo'],['R','rejeitar'],['Ctrl+Enter (2×)','exportar'],['+ −','zoom da linha do tempo'],['Alt (ao arrastar)','desliga o alinhamento magnético'],['Ctrl+K','buscar e executar qualquer ação'],['?','mostrar estes atalhos']];
+/* ── Busca de ações (Ctrl+K): lista só o que se pode fazer agora; acentos e maiúsculas não importam ── */
+const norm=x=>String(x).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function commands(){const P=ST.proj,sel=!!ST.sel,d=ST.data,list=[
+ ['Cortar o trecho selecionado','C','remover apagar tirar',sel,()=>selectionOp('cut')],
+ ['Dar zoom no trecho selecionado','','aproximar ampliar',sel,()=>selectionOp('zoom')],
+ ['Adicionar título no trecho selecionado','','texto na tela',sel,()=>selectionOp('title')],
+ ['Limpar seleção','Esc','desmarcar',sel||!!ST.item,()=>{ST.sel=null;ST.anchor=null;ST.item=null;drawLeft();drawTimeline();drawRight()}],
+ ['Remover o item selecionado','Delete','apagar excluir',!!ST.item,()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'Delete',bubbles:true}))],
+ ['Desfazer','Ctrl+Z','voltar',ST.undo.length>0,undo],['Refazer','Ctrl+Shift+Z','',ST.redo.length>0,redo],
+ ['Salvar agora','Ctrl+S','gravar',true,()=>saveNow()],
+ ['Atualizar a prévia','P','renderizar gerar',!ST.busy,()=>refreshPreview()],
+ ['Reproduzir / pausar','Espaço','play tocar',true,()=>$('stPlay').click()],
+ ['Corte anterior','[','voltar clipe',true,()=>goClip(-1)],['Próximo corte','] ','avancar clipe',true,()=>goClip(1)],
+ ['Recolher / mostrar a linha do tempo (prévia maior)','F','ampliar previa foco',true,toggleFold],
+ ['Aproximar a linha do tempo','+','zoom timeline',true,()=>$('tlIn').click()],['Afastar a linha do tempo','−','zoom timeline',true,()=>$('tlOut').click()],
+ ['Mostrar todas as pistas','','pistas vazias',true,()=>$('tlAll').click()],
+ ['Mostrar / esconder zonas seguras','','margens tiktok',true,()=>$('safeToggle').click()],
+ ['Ligar / desligar legendas ao vivo','','previa legenda',true,()=>$('liveToggle').click()],
+ ['Ligar / desligar prévia automática','','autoprevia',true,()=>$('stAuto').click()],
+ ['Rejeitar este corte','R','descartar',true,()=>$('stReject').click()],
+ ['Ir para Exportar (confirme com Enter no botão)','Ctrl+Enter ×2','aprovar enviar',!ST.busy,()=>{$('stApprove').focus();toast('Exportar: pressione Enter no botão destacado para confirmar.')}],
+ ['Mostrar os atalhos do teclado','?','ajuda',true,showKeys],
+ ['Voltar à biblioteca','','sair fechar',true,()=>leave()]];
+ for(const [id,label] of SECTIONS)if(id!=='pub'||d.status==='done')list.push(['Abrir seção: '+label,'','inspetor painel',true,()=>{ST.secs.add(id);drawRight();const e=document.querySelector('[data-sec="'+id+'"]');if(e)e.scrollIntoView({block:'nearest'})}]);
+ return list.filter(x=>x[3]).map(([label,key,words,,run])=>({label,key:key.trim(),words,run,hay:norm(label+' '+words+' '+key)}))}
+const CMDK={items:[],shown:[],at:0};
+function cmdRender(){const q=norm($('cmdInput').value).split(/\s+/).filter(Boolean);
+ const rank=c=>{const l=norm(c.label),w=l.split(/[^a-z0-9]+/);return q.length?(l.startsWith(q[0])?0:q.every(t=>w.some(x=>x.startsWith(t)))?1:2):0};   /* começa com a busca < palavra começa com a busca < contém; empate: nome mais curto */
+ CMDK.shown=CMDK.items.filter(c=>q.every(t=>c.hay.includes(t))).sort((a,b)=>rank(a)-rank(b)||a.label.length-b.label.length);
+ CMDK.at=Math.min(CMDK.at,Math.max(0,CMDK.shown.length-1));
+ $('cmdList').innerHTML=CMDK.shown.length?CMDK.shown.map((c,i)=>`<li role="option" id="cmd${i}" data-i="${i}" class="${i===CMDK.at?'on':''}" aria-selected="${i===CMDK.at}"><span class="lbl">${esc(c.label)}</span>${c.key?`<kbd>${esc(c.key)}</kbd>`:''}</li>`).join(''):'<li class="empty" role="option" aria-disabled="true">Nenhuma ação encontrada.</li>';
+ $('cmdInput').setAttribute('aria-activedescendant',CMDK.shown.length?'cmd'+CMDK.at:'')}
+function cmdOpen(){const d=$('cmdDialog');if(d.open)return;CMDK.items=commands();CMDK.at=0;$('cmdInput').value='';cmdRender();d.showModal();$('cmdInput').focus()}
+function cmdRun(i){const c=CMDK.shown[i];if(!c)return;$('cmdDialog').close();setTimeout(()=>{try{c.run()}catch(e){toast(e.message,true)}},0)}
+$('cmdInput').addEventListener('input',()=>{CMDK.at=0;cmdRender()});
+$('cmdInput').addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const n=CMDK.shown.length;if(n){CMDK.at=(CMDK.at+(e.key==='ArrowDown'?1:n-1))%n;cmdRender();const el=$('cmd'+CMDK.at);if(el)el.scrollIntoView({block:'nearest'})}}else if(e.key==='Enter'){e.preventDefault();cmdRun(CMDK.at)}});
+$('cmdList').addEventListener('click',e=>{const li=e.target.closest('li[data-i]');if(li)cmdRun(+li.dataset.i)});
+$('stCmd').onclick=cmdOpen;
+document.addEventListener('keydown',e=>{if(ST.open&&(e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&e.key.toLowerCase()==='k'&&!document.querySelector('dialog[open]')){e.preventDefault();cmdOpen()}});
 function showKeys(){const d=$('keysDialog');$('keysList').innerHTML=SHORTCUTS.map(([k,v])=>`<div class="row"><kbd>${k}</kbd><span class="grow">${v}</span></div>`).join('');d.showModal()}
 document.addEventListener('keydown',e=>{if(!ST.open||document.querySelector('dialog[open]'))return;const tag=(e.target.tagName||'');const typing=['INPUT','TEXTAREA','SELECT'].includes(tag);const mod=e.ctrlKey||e.metaKey;
  if(mod&&e.key.toLowerCase()==='z'){if(typing)return;e.preventDefault();e.shiftKey?redo():undo();return}

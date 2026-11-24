@@ -41,3 +41,6 @@ for k,(a,b,score) in enumerate(([(5,95,9.1),(22,50,7.4),(5,30,6.2)] if LONG else
     parts=plan(rows,a,b,group)
     key,_=store.propose(sid,data,parts,dict(profile))
 print('ok',sid)
+if LONG:   # corte manual de 90 s (os candidatos automáticos se sobrepõem e são fundidos): benchmark V09
+    from liveclips.app import App
+    a=App(str(root));print('manual90',a.make_manual(a.store.session(sid),5.0,95.0,allow_overlap=True))

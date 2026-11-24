@@ -1,0 +1,188 @@
+{
+ "ruido": [
+  {
+   "cadeia": "APP (lido do código): afftdn=nr=12:nf=-45:tn=1,afwtdn=adaptive=1:percent=70",
+   "tempo_s_para_24s": 0.24,
+   "SDR_dB": 12.41,
+   "piso_ruido_dBFS": -53.4,
+   "SNR_dB": 31.8,
+   "VOL_sigma_dB": 4.9
+  },
+  {
+   "cadeia": "sem_tratamento",
+   "tempo_s_para_24s": 0.1,
+   "SDR_dB": 20.34,
+   "piso_ruido_dBFS": -42.2,
+   "SNR_dB": 20.6,
+   "VOL_sigma_dB": 4.8
+  },
+  {
+   "cadeia": "atual: highpass70+afftdn(nr12,nf-45)",
+   "tempo_s_para_24s": 0.17,
+   "SDR_dB": 12.37,
+   "piso_ruido_dBFS": -48.2,
+   "SNR_dB": 26.6,
+   "VOL_sigma_dB": 4.87
+  },
+  {
+   "cadeia": "afftdn mais forte (nr20)",
+   "tempo_s_para_24s": 0.19,
+   "SDR_dB": 12.38,
+   "piso_ruido_dBFS": -48.4,
+   "SNR_dB": 26.7,
+   "VOL_sigma_dB": 4.87
+  },
+  {
+   "cadeia": "anlmdn (non-local means)",
+   "tempo_s_para_24s": 2.02,
+   "SDR_dB": 12.45,
+   "piso_ruido_dBFS": -60.7,
+   "SNR_dB": 39.1,
+   "VOL_sigma_dB": 4.92
+  },
+  {
+   "cadeia": "afwtdn (wavelet)",
+   "tempo_s_para_24s": 0.21,
+   "SDR_dB": 12.3,
+   "piso_ruido_dBFS": -57.8,
+   "SNR_dB": 36.1,
+   "VOL_sigma_dB": 4.94
+  },
+  {
+   "cadeia": "afftdn+gate suave",
+   "tempo_s_para_24s": 0.21,
+   "SDR_dB": 12.37,
+   "piso_ruido_dBFS": -51.5,
+   "SNR_dB": 29.8,
+   "VOL_sigma_dB": 4.87
+  },
+  {
+   "cadeia": "afwtdn 60%",
+   "tempo_s_para_24s": 0.21,
+   "SDR_dB": 12.36,
+   "piso_ruido_dBFS": -52.8,
+   "SNR_dB": 31.1,
+   "VOL_sigma_dB": 4.93
+  },
+  {
+   "cadeia": "afwtdn 70%",
+   "tempo_s_para_24s": 0.19,
+   "SDR_dB": 12.34,
+   "piso_ruido_dBFS": -54.6,
+   "SNR_dB": 33.0,
+   "VOL_sigma_dB": 4.93
+  },
+  {
+   "cadeia": "afwtdn 100%",
+   "tempo_s_para_24s": 0.17,
+   "SDR_dB": 12.24,
+   "piso_ruido_dBFS": -59.7,
+   "SNR_dB": 38.0,
+   "VOL_sigma_dB": 4.94
+  },
+  {
+   "cadeia": "afftdn leve (nr6)",
+   "tempo_s_para_24s": 0.24,
+   "SDR_dB": 12.35,
+   "piso_ruido_dBFS": -47.6,
+   "SNR_dB": 26.0,
+   "VOL_sigma_dB": 4.87
+  },
+  {
+   "cadeia": "afftdn + afwtdn 60%",
+   "tempo_s_para_24s": 0.33,
+   "SDR_dB": 12.41,
+   "piso_ruido_dBFS": -52.3,
+   "SNR_dB": 30.7,
+   "VOL_sigma_dB": 4.9
+  },
+  {
+   "cadeia": "so highpass 70",
+   "tempo_s_para_24s": 0.13,
+   "SDR_dB": 12.27,
+   "piso_ruido_dBFS": -45.7,
+   "SNR_dB": 24.1,
+   "VOL_sigma_dB": 4.85
+  },
+  {
+   "cadeia": "notch 60/120 Hz + afftdn",
+   "tempo_s_para_24s": 0.2,
+   "SDR_dB": 11.05,
+   "piso_ruido_dBFS": -49.0,
+   "SNR_dB": 27.3,
+   "VOL_sigma_dB": 4.87
+  }
+ ],
+ "nivelamento": [
+  {
+   "cadeia": "sem nivelar",
+   "VOL_sigma_dB": 4.9,
+   "LUFS": -21.5,
+   "pico_dBTP": 0.0
+  },
+  {
+   "cadeia": "compressor natural (preset atual)",
+   "VOL_sigma_dB": 2.64,
+   "LUFS": -20.6,
+   "pico_dBTP": -1.4
+  },
+  {
+   "cadeia": "compressor forte (preset atual)",
+   "VOL_sigma_dB": 1.69,
+   "LUFS": -18.1,
+   "pico_dBTP": 0.0
+  },
+  {
+   "cadeia": "dynaudnorm (nivelador)",
+   "VOL_sigma_dB": 4.03,
+   "LUFS": -18.6,
+   "pico_dBTP": -1.0
+  },
+  {
+   "cadeia": "speechnorm",
+   "VOL_sigma_dB": 2.76,
+   "LUFS": -16.6,
+   "pico_dBTP": -0.3
+  }
+ ],
+ "musica": [
+  {
+   "cadeia": "APP (lido do código): threshold=.03:ratio=10:attack=15:release=400",
+   "musica_na_fala_dBFS": -32.7,
+   "musica_nas_pausas_dBFS": -25.3,
+   "queda_dB": 7.3
+  },
+  {
+   "cadeia": "versão 0.19: threshold=.06:ratio=8:attack=20:release=350",
+   "musica_na_fala_dBFS": -28.4,
+   "musica_nas_pausas_dBFS": -24.4,
+   "queda_dB": 3.9
+  },
+  {
+   "cadeia": "mais suave (thr .1, ratio 4)",
+   "musica_na_fala_dBFS": -25.7,
+   "musica_nas_pausas_dBFS": -24.2,
+   "queda_dB": 1.5
+  }
+ ],
+ "final": [
+  {
+   "cadeia": "app: limpeza leve",
+   "LUFS": -20.0,
+   "pico_dBTP": -1.5,
+   "VOL_sigma_dB": 2.82
+  },
+  {
+   "cadeia": "app: limpeza leve + preset natural",
+   "LUFS": -19.0,
+   "pico_dBTP": -1.5,
+   "VOL_sigma_dB": 1.01
+  },
+  {
+   "cadeia": "app: sem limpeza",
+   "LUFS": -19.1,
+   "pico_dBTP": -1.5,
+   "VOL_sigma_dB": 3.23
+  }
+ ]
+}

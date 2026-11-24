@@ -101,7 +101,7 @@
  <div class="sbar">
   <button id="stBack" class="quiet" title="Voltar à biblioteca (salva antes)">← Voltar</button><span class="name" id="stName"></span><button type="button" class="chip" id="stState"></button><span class="chip" id="stPrev"></span><span class="small muted" id="stFlow" aria-live="polite"></span>
   <span class="grow"><ol class="steps" id="stSteps" aria-label="Etapas do corte"></ol></span>
-  <button id="stUndo" class="quiet small" title="Desfazer (Ctrl+Z)" aria-label="Desfazer">↶</button><button id="stRedo" class="quiet small" title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer">↷</button><button id="stKeys" class="quiet small" title="Atalhos do teclado (?)" aria-label="Atalhos do teclado">?</button>
+  <button id="stUndo" class="quiet small" title="Desfazer (Ctrl+Z)" aria-label="Desfazer">↶</button><button id="stRedo" class="quiet small" title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer">↷</button><button id="stCmd" class="quiet small" title="Buscar ação (Ctrl+K)" aria-label="Buscar ação">⌕</button><button id="stKeys" class="quiet small" title="Atalhos do teclado (?)" aria-label="Atalhos do teclado">?</button>
   <button id="stRefresh" title="Gera a prévia com as alterações (P)">Atualizar prévia</button>
   <button id="stReject" class="danger" title="Rejeitar (R)">Rejeitar</button>
   <span class="export"><select id="stQuality" aria-label="Qualidade da exportação" title="Qualidade do arquivo final"></select><button id="stApprove" class="primary" title="Aprova e coloca na fila de exportação (Ctrl+Enter duas vezes)">Exportar</button></span>
@@ -118,6 +118,7 @@
   <div class="tl-wrap" id="tlWrap"><div class="tl-heads" id="tlHeads"></div><div class="tl-scroll" id="tlScroll"><div class="tl" id="tl"></div></div></div>
  </div>
 </div>
+<dialog id="cmdDialog" class="cmd" aria-label="Buscar ação"><input id="cmdInput" type="text" autocomplete="off" spellcheck="false" placeholder="Buscar ação… (ex.: cortar, zoom, exportar)" aria-label="Buscar ação" role="combobox" aria-expanded="true" aria-controls="cmdList"><ul id="cmdList" role="listbox"></ul><div class="cmd-foot muted small">↑ ↓ navegam · Enter executa · Esc fecha</div></dialog>
 <dialog id="keysDialog"><div class="dhead"><h2>Atalhos do Estúdio</h2><button class="quiet" data-close aria-label="Fechar">✕</button></div><div class="body list" id="keysList"></div></dialog>
 
 <dialog id="streamerDialog"><div class="dhead"><div><h2>Adicionar streamer</h2><p class="muted">Esse nome também será o nome da pasta.</p></div><button class="quiet" data-close aria-label="Fechar">✕</button></div><form id="streamerForm"><div><label for="streamerName">Nome</label><input id="streamerName" placeholder="Ex.: CORINGA" maxlength="60" required></div><button class="primary">Criar pasta e perfil</button></form></dialog>

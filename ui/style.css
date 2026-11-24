@@ -382,3 +382,14 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
 .steps li.done{color:var(--muted)}
 .steps li.now{color:var(--ink);font-weight:650}
 .steps li.now b{background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:1px 9px;font-weight:650}
+/* Busca de ações (Ctrl+K) */
+dialog.cmd{width:min(560px,94vw);margin-top:12vh;overflow:hidden}
+.cmd input{width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:14px 18px;font-size:var(--fs-lg);outline:none}
+.cmd ul{list-style:none;margin:0;padding:6px;max-height:50vh;overflow:auto}
+.cmd li{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:var(--fs-md)}
+.cmd li .lbl{flex:1}.cmd li small{color:var(--muted);font-size:var(--fs-xs)}
+.cmd li kbd{flex:none;width:auto;min-width:0;display:inline-block;font-size:var(--fs-xs);padding:1px 7px;border:1px solid var(--line2);border-radius:5px;color:var(--muted)}
+.cmd li.on{background:var(--hover);outline:1px solid var(--line2)}
+.cmd .empty{padding:14px 18px;color:var(--muted)}
+.cmd-foot{padding:8px 16px;border-top:1px solid var(--line)}
+.snapguide{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--aqua);box-shadow:0 0 8px var(--aqua);pointer-events:none;z-index:7;display:none}
