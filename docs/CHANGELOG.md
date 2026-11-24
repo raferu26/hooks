@@ -110,3 +110,7 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 - **RESULTADO:** piso de ruído **−48,2 → −53,4 dBFS** em 24 s (híbrido removeu 6,0/6,0/9,1/9,7 dB a mais em 6/12/24/60 s), SDR da fala igual (±0,05), +0,04 s de processamento por 24 s de áudio; ducking **3,9 → 7,3 dB**; pico verdadeiro ≤ −1,5 dBTP. Detalhes e limites em `docs/AUDIO.md`.
 - **Achado/decisão pendente:** preset de voz `natural` reduz VOL σ de 2,8 para 1,0 dB; hoje o padrão é `off`.
 - **Não validado:** fala real, ruído não estacionário, Windows (versão do FFmpeg), percepção por pessoas.
+
+## [Fidelidade prévia × exportação final — medição] — 24/11/2026
+- **Medição** (corte de 28 s, vídeo sintético, modo Equilibrado, CPU): SSIM do final (1080×1920 reduzido a 540×960) contra o **rascunho novo** = **0,9759**; contra o **rascunho antigo** (mesmo trecho, filtros de 0.19) = **0,9757**. A otimização do rascunho **não** reduziu a fidelidade ao arquivo final (diferença 0,0002). Tempos: prévia 6,5 s; exportação 35,1 s.
+- **Limites:** fonte sintética; legenda/título do final não aparecem no rascunho (a prévia usa legenda ao vivo em HTML — comparação lado a lado com libass segue pendente, V04); GPU não testada.
