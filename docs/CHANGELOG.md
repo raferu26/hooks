@@ -80,3 +80,11 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 - **ANTES:** o alinhamento magnético funcionava mas era invisível: o usuário não sabia a que o item grudou.
 - **ALTERAÇÃO** (`ui/studio.js`, `style.css`): linha vertical ciana no instante do alvo enquanto o item está alinhado (some ao soltar ou com Alt). Move/redimensiona rastreia qual borda (início ou fim) alinhou.
 - **TESTE:** e2e `guia_aparece_ao_alinhar` (guia em 4,00 s ±0,05) e `guia_some_ao_soltar`; snap e Alt continuam OK; benchmark de arrasto mantido (<1 ms p95 com 200 itens).
+
+## [Lista de fala sem redesenho desnecessário + medição de 90 s] — 24/11/2026 (N5/V09)
+- **ANTES (clipe de 90 s, 100 cortes):** `mutate` ≈ 11 ms; **`drawLeft` 6,2 ms** (lista de ~270 palavras refeita a cada ação; `allCuts()` recalculado por palavra); `drawTimeline` 3,6 ms; snapshot 0,08 ms.
+- **ALTERAÇÃO** (`ui/studio.js`): cortes calculados 1× por desenho; **memorização** da lista de fala (chave = linhas, cortes, seleção, âncora, edição); se nada que a fala mostra mudou (zoom, título, velocidade…), o DOM não é refeito.
+- **TESTE:** e2e `fala_risca_palavras_cortadas` e `fala_desfazer_limpa_risco` (a memória não fica velha); e2e completo sem falhas; `test_interface`, `test_design_tokens`, `test_http` OK; `bench_ui.py` mede `mutate_zoom` com/sem memo.
+- **RESULTADO:** ver `docs/BASELINE.md` §3b (valores medidos; edição de zoom com 100 cortes: p50/p95 8,1/13,2 → 4,2/8,1 ms na medição de perfil).
+- **Lacunas:** editar cortes/seleção ainda refaz a fala; sem virtualização; Linux/sintético, sem máquina fraca.
+- **Nota de processo:** o commit anterior desta etapa (`5d2af4a`) subiu sem a atualização de docs e com os JSON de benchmark vazios por falha de um servidor de teste; corrigido neste commit seguinte (sem reescrever histórico).
