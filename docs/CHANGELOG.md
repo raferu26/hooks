@@ -75,3 +75,8 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 - **ALTERAÇÃO** (`ui/studio.js`, `body.html`, `style.css`): **Ctrl+K** (ou botão ⌕ na barra) abre uma busca no Estúdio com ~30 ações: cortar/zoom/título no trecho, desfazer/refazer, salvar, prévia, reproduzir, navegar entre cortes, recolher a timeline, zonas seguras, abrir qualquer seção do inspetor, atalhos, voltar. Lista **só o que vale agora** (ex.: "Cortar" some sem seleção); ignora acentos e maiúsculas; ↑↓ Enter Esc; mostra o atalho de cada ação. "Exportar" não executa direto: leva o foco ao botão para manter a confirmação (N6).
 - **TESTE:** e2e `cmdk_*` (6 verificações) + e2e completo sem falhas/erros de console; `test_interface`, `test_design_tokens`, `test_http` OK.
 - **Não feito:** ações do fluxo de legendas/estilos por nome; histórico de ações recentes; teste com pessoas (a descoberta do Ctrl+K depende do botão ⌕ e do diálogo `?`).
+
+## [Guia visual do snap] — 24/11/2026 (A03)
+- **ANTES:** o alinhamento magnético funcionava mas era invisível: o usuário não sabia a que o item grudou.
+- **ALTERAÇÃO** (`ui/studio.js`, `style.css`): linha vertical ciana no instante do alvo enquanto o item está alinhado (some ao soltar ou com Alt). Move/redimensiona rastreia qual borda (início ou fim) alinhou.
+- **TESTE:** e2e `guia_aparece_ao_alinhar` (guia em 4,00 s ±0,05) e `guia_some_ao_soltar`; snap e Alt continuam OK; benchmark de arrasto mantido (<1 ms p95 com 200 itens).

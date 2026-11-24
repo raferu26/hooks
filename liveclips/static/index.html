@@ -396,6 +396,7 @@ dialog.cmd{width:min(560px,94vw);margin-top:12vh;overflow:hidden}
 .cmd li.on{background:var(--hover);outline:1px solid var(--line2)}
 .cmd .empty{padding:14px 18px;color:var(--muted)}
 .cmd-foot{padding:8px 16px;border-top:1px solid var(--line)}
+.snapguide{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--aqua);box-shadow:0 0 8px var(--aqua);pointer-events:none;z-index:7;display:none}
 
 </style></head>
 <body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -1195,16 +1196,19 @@ function drawTimeline(){if(!ST.open)return;const D=dur(),W=Math.ceil(D*ST.pps)+2
 function getItem(it){if(!it)return null;const P=ST.proj;if(it.kind==='cut')return P.cuts.find(c=>c._k===it.k);if(it.kind==='zoom')return P.zooms.find(z=>z.id===it.id);if(it.kind==='title')return P.titles.find(z=>z.id===it.id);if(it.kind==='teaser')return P.teaser;if(it.kind==='sfx')return P.sfx.find(e=>e.id===it.id);if(it.kind==='speed')return P.speeds.find(e=>e.id===it.id);if(it.kind==='freeze')return P.freezes.find(e=>e.id===it.id);if(it.kind==='image')return P.overlays.find(e=>e.id===it.id)}
 const tlX=e=>e.clientX-$('tl').getBoundingClientRect().left;
 /* Durante o arrasto só o bloco movido muda de lugar: evita reconstruir a linha do tempo inteira a cada pointermove (N5). Itens sem bloco (SFX/congelar) caem no redesenho completo. */
-function dragPaint(b,it,kind){if(b&&b.isConnected&&b.classList.contains('blk')&&kind!=='sfx'&&kind!=='freeze'){b.style.left=X(it.start)+'px';b.style.width=Math.max(6,X(it.end-it.start))+'px'}else drawTimeline()}
+function dragPaint(b,it,kind){if(b&&b.isConnected&&b.classList.contains('blk')&&kind!=='sfx'&&kind!=='freeze'){b.style.left=X(it.start)+'px';b.style.width=Math.max(6,X(it.end-it.start))+'px'}else drawTimeline();paintGuide()}
 function snapTargets(self){const P=ST.proj,t=[0,dur(),ST.cursor||0];for(const k of ['cuts','zooms','titles','speeds','overlays'])for(const x of P[k]||[])if(x!==self){t.push(x.start,x.end)}for(const k of ['sfx','freezes'])for(const x of P[k]||[])if(x!==self)t.push(x.at);return t}
 /* Alinha ao alvo mais próximo (cursor, bordas de outros itens, início/fim) até 8 px. Alt desliga. */
-function snapTo(v,self){const th=8/(ST.pps||1);let best=v,d=th;for(const x of snapTargets(self)){const k=Math.abs(x-v);if(k<d){d=k;best=x}}return best}
+const SNAP={hit:null};
+function snapTo(v,self){const th=8/(ST.pps||1);let best=v,d=th;SNAP.hit=null;for(const x of snapTargets(self)){const k=Math.abs(x-v);if(k<d){d=k;best=x;SNAP.hit=x}}return best}
+/* guia visual do alinhamento: linha vertical no instante do alvo, só enquanto arrasta */
+function paintGuide(){const tl=$('tl');if(!tl)return;let g=$('snapGuide');if(!g){g=document.createElement('div');g.id='snapGuide';g.className='snapguide';tl.appendChild(g)}if(SNAP.hit==null)g.style.display='none';else{g.style.left=X(SNAP.hit)+'px';g.style.display='block'}}
 $('tlScroll').addEventListener('pointerdown',e=>{
  const b=e.target.closest('[data-kind]');
  if(b){const kind=b.dataset.kind,key=b.dataset.key;ST.item=kind==='cut'?{kind,k:key}:{kind,id:key};const it=getItem(ST.item);ST.undo.push(snap());ST.redo=[];const orig={...it},t0=T_(tlX(e)),mode=e.target.classList.contains('l')?'l':e.target.classList.contains('r')?'r':'m';let moved=false;
   const move=ev=>{const dt=T_(tlX(ev))-t0;if(Math.abs(dt)>.02)moved=true;const q=v=>Math.round(v*20)/20;
-   const sn=v=>ev.altKey?v:snapTo(v,it);if(kind==='sfx'||kind==='freeze')it.at=clamp(sn(q(orig.at+dt)),0,dur());else{let a=orig.start,bb=orig.end;if(mode==='m'){const L=bb-a;a=q(a+dt);const sa=sn(a),sb=sn(a+L);if(sa!==a||sb!==a+L){a=(sa!==a&&(sb===a+L||Math.abs(sa-a)<=Math.abs(sb-a-L)))?sa:sb-L}a=clamp(a,0,dur()-L);bb=a+L}else if(mode==='l')a=clamp(sn(q(a+dt)),0,bb-.1);else bb=clamp(sn(q(bb+dt)),a+.1,dur());it.start=r2(a);it.end=r2(bb)}dragPaint(b,it,kind)};
-  const up=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);if(moved){changed();ST.proj.cuts.sort((a,b)=>a.start-b.start);ST.proj.zooms.sort((a,b)=>a.start-b.start);ST.proj.titles.sort((a,b)=>a.start-b.start);ST.proj.speeds.sort((a,b)=>a.start-b.start);ST.proj.freezes.sort((a,b)=>a.at-b.at);ST.proj.overlays.sort((a,b)=>a.start-b.start);drawAll()}else{ST.undo.pop();drawRight();drawTimeline();if(kind!=='sfx'&&kind!=='freeze')seekClip(it.start);else seekClip(it.at)}};
+   const sn=v=>{if(ev.altKey){SNAP.hit=null;return v}return snapTo(v,it)};if(kind==='sfx'||kind==='freeze')it.at=clamp(sn(q(orig.at+dt)),0,dur());else{let a=orig.start,bb=orig.end;if(mode==='m'){const L=bb-a;a=q(a+dt);const sa=sn(a),ha=SNAP.hit,sb=sn(a+L),hb=SNAP.hit;if(sa!==a||sb!==a+L){const useA=sa!==a&&(sb===a+L||Math.abs(sa-a)<=Math.abs(sb-a-L));a=useA?sa:sb-L;SNAP.hit=useA?ha:hb}else SNAP.hit=nulla=clamp(a,0,dur()-L);bb=a+L}else if(mode==='l')a=clamp(sn(q(a+dt)),0,bb-.1);else bb=clamp(sn(q(bb+dt)),a+.1,dur());it.start=r2(a);it.end=r2(bb)}dragPaint(b,it,kind)};
+  const up=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);SNAP.hit=null;if(moved){changed();ST.proj.cuts.sort((a,b)=>a.start-b.start);ST.proj.zooms.sort((a,b)=>a.start-b.start);ST.proj.titles.sort((a,b)=>a.start-b.start);ST.proj.speeds.sort((a,b)=>a.start-b.start);ST.proj.freezes.sort((a,b)=>a.at-b.at);ST.proj.overlays.sort((a,b)=>a.start-b.start);drawAll()}else{ST.undo.pop();drawRight();drawTimeline();if(kind!=='sfx'&&kind!=='freeze')seekClip(it.start);else seekClip(it.at)}};
   drawRight();
   document.addEventListener('pointermove',move);document.addEventListener('pointerup',up);e.preventDefault();return}
  if(e.target.closest('[data-seek]')){seekClip(+e.target.closest('[data-seek]').dataset.seek)}

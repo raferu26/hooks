@@ -392,3 +392,4 @@ dialog.cmd{width:min(560px,94vw);margin-top:12vh;overflow:hidden}
 .cmd li.on{background:var(--hover);outline:1px solid var(--line2)}
 .cmd .empty{padding:14px 18px;color:var(--muted)}
 .cmd-foot{padding:8px 16px;border-top:1px solid var(--line)}
+.snapguide{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--aqua);box-shadow:0 0 8px var(--aqua);pointer-events:none;z-index:7;display:none}
