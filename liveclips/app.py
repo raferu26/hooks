@@ -402,6 +402,7 @@ class App:
             if path=='/api/composition/resolve':return self.composition_resolve(payload)
             if path=='/api/composition/presets':return self.composition_presets(payload)
             if path=='/api/composition/apply':return self.composition_apply(payload)
+            if path=='/api/composition/suggest':return self.composition_suggest(payload)
             if path=='/api/performance/save':
                 item=s.candidate(payload['id']);perf=s.save_performance(item['id'],payload)
                 return dict(performance=perf,summary=s.learning_summary(item['streamer']))
@@ -701,6 +702,26 @@ class App:
         elif action=='delete':composition.delete_preset(root,str(payload.get('preset')))
         elif action!='list':raise ValueError('Ação inválida.')
         return dict(presets=composition.list_presets(root,source))
+
+    def composition_suggest(self,payload):
+        """Sugestões (heurística de pixels, sem IA) de trechos para destacar a webcam: conteúdo parado + webcam em movimento."""
+        from . import composition,reaction_signals as signals
+        item=self.store.candidate(payload['id']);comp=composition.clean(payload.get('composition'))
+        if not comp or not all(r in comp['regions'] for r in ('webcam','conteudo')):
+            raise ValueError('Marque a webcam e o conteúdo antes de pedir sugestões.')
+        options=signals.clean_options(payload.get('options'))
+        regions={k:comp['regions'][k] for k in ('webcam','conteudo')}
+        found=[];cursor=0.0
+        for part in item['parts']:
+            length=float(part['out'])-float(part['in']);info=media.probe(part['path'])
+            motion=signals.region_motion(media.tool('ffmpeg'),part['path'],float(part['in']),length,regions,
+                                         (info['display_width'],info['display_height']),info['sar'])
+            found+=signals.find_runs(motion['conteudo'],motion['webcam'],options,cursor);cursor+=length
+        suggestions=signals.rank(found,options)
+        busy=[(s['start'],s['end']) for s in comp.get('scenes') or []]
+        for sug in suggestions:sug['overlaps_scene']=any(sug['start']<b and sug['end']>a for a,b in busy)
+        return dict(suggestions=suggestions,rule=signals.rule_text(options),options=options,
+                    disclaimer='Sugestão baseada só em movimento de pixels. Não sabe se o vídeo foi pausado nem o que o streamer faz; você decide.')
 
     def composition_apply(self,payload):
         """Aplica a composição atual a outros cortes (os marcados ou todos da mesma sessão), sem tocar nos já exportados."""

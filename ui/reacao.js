@@ -3,7 +3,7 @@
    Coordenadas das regiões: frações 0–1 do quadro de exibição da fonte (origem no canto superior esquerdo).
    Transformação do seletor: ponteiro (px da tela) → retângulo da <img> (getBoundingClientRect) → fração 0–1 → região salva
    → crop em pixels da fonte (servidor) → filtro crop= do FFmpeg. A <img> não tem letterbox, então a fração é direta. */
-const RX={presets:null,presetSel:'',applyOpen:false,applyPick:{},plan:null,key:'',frameImg:null,frameKey:'',picker:null,more:false,busy:0,t:null};
+const RX={sug:null,suggesting:false,ignored:{},presets:null,presetSel:'',applyOpen:false,applyPick:{},plan:null,key:'',frameImg:null,frameKey:'',picker:null,more:false,busy:0,t:null};
 const RX_COLORS={webcam:'#35d0ba',conteudo:'#4f9bff',webcam2:'#f5a524'};
 const RX_ROLE={webcam:'Webcam',conteudo:'Conteúdo',webcam2:'Webcam 2'};
 const RX_DIAG={
@@ -84,9 +84,14 @@ function rxScenesHtml(c){const sc=(c.scenes||[]);
  let h=`<h4 aria-level="3">Cenas de reação</h4><p class="help">Troque o layout em partes do clipe (por exemplo, foco na reação enquanto o streamer comenta). Fora das cenas vale o layout principal.</p>`;
  h+=`<div class="row"><button class="small" data-rx="scene-add">＋ Cena na seleção</button>${RX.sceneClip?`<button class="small" data-rx="scene-paste">Colar na seleção</button>`:''}</div>`;
  if(sc.length)h+=`<div class="list">${sc.map(x=>`<div class="item ${ST.item?.kind==='scene'&&ST.item.id===x.id?'sel':''}" data-pick="scene:${x.id}"><div class="row"><b class="grow">${esc(rxLayout(x.layout).label)}</b><span class="muted small">${clock(x.start,1)}–${clock(x.end,1)}${x.fade?' · suave':''}</span></div></div>`).join('')}</div>`;
+ h+=`<div class="row"><button class="small" data-rx="suggest" ${RX.suggesting?'disabled':''}>${RX.suggesting?'Analisando…':'Sugerir momentos para destacar a webcam'}</button></div>`;
+ if(RX.sug){const list=RX.sug.suggestions.filter(x=>!RX.ignored[x.start+'-'+x.end]);
+  h+=list.length?`<div class="list">${list.map(x=>`<div class="item"><div class="row"><b class="grow">${clock(x.start,1)}–${clock(x.end,1)}</b><span class="muted small" title="Confiança heurística: relação entre movimento da webcam e do conteúdo">${x.strength}</span></div><p class="help" style="margin:0">${esc(x.reason)}</p>${x.overlaps_scene?'<p class="help" style="margin:0">Já existe uma cena neste trecho.</p>':''}<div class="row"><button class="small primary" data-rx="sug-ok:${x.start}:${x.end}" ${x.overlaps_scene?'disabled':''}>Aprovar</button><button class="small quiet" data-rx="sug-no:${x.start}:${x.end}">Ignorar</button></div></div>`).join('')}</div>`:`<p class="help">Nenhum trecho encontrado com essa regra.</p>`;
+  h+=`<p class="help">${esc(RX.sug.rule)} ${esc(RX.sug.disclaimer)}</p>`}
  const bad=sc.some((a,k)=>k&&a.start<sc[k-1].end-.001);if(bad)h+=`<div class="banner">Há cenas sobrepostas: ajuste os tempos (não é possível salvar assim).</div>`;
  return h}
 function rxPickSceneLayout(){const c=rxComp();return c.layout==='foco_reacao'?'cam_ampliada':'foco_reacao'}
+function rxAddScene(a,b){const save=ST.sel;ST.sel={a,b};rxNewScene(rxPickSceneLayout(),{});ST.sel=save}
 function rxNewScene(layout,params){const sorted=((ST.proj.composition.scenes)||[]).slice().sort((a,b)=>a.start-b.start);const [a0,b0]=range(3),a=r2(a0),b=r2(b0);
  if(b-a<.4)return toast('Selecione pelo menos 0,4 s na linha do tempo (ou posicione o cursor antes do fim).',true);
  if(sorted.some(x=>a<x.end&&b>x.start))return toast('Esse trecho já tem outra cena.',true);
@@ -184,6 +189,9 @@ $('stRight').addEventListener('click',e=>{const t=e.target;
    mutate(()=>{const old=ST.proj.composition,keep=p.has_regions&&p.compatible?p.regions:(old?old.regions:{});ST.proj.composition={version:1,layout:p.layout,regions:keep||{},params:Object.assign({},p.params)}});
    if(p.has_regions&&!p.compatible)toast('Este layout foi salvo com regiões de um vídeo de outra proporção: só o modelo e os ajustes foram aplicados. Marque as regiões.',false);
    const next=rxMissing(rxComp())[0];if(next)setTimeout(()=>rxOpenPicker(next),50)}
+  else if(k==='suggest'){RX.suggesting=true;drawRight();(async()=>{try{if(ST.dirty)await persist({learn:false,preview:false,force:true});RX.sug=await api('/api/composition/suggest',{id:ST.id,composition:ST.proj.composition})}catch(e){toast(e.message,true)}RX.suggesting=false;drawRight()})()}
+  else if(k.startsWith('sug-ok:')){const [,a,b]=k.split(':');RX.ignored[a+'-'+b]=true;rxAddScene(+a,+b)}
+  else if(k.startsWith('sug-no:')){const [,a,b]=k.split(':');RX.ignored[a+'-'+b]=true;drawRight()}
   else if(k==='scene-add')rxNewScene(rxPickSceneLayout(),{})
   else if(k==='scene-paste'&&RX.sceneClip)rxNewScene(RX.sceneClip.layout,RX.sceneClip.params)
   else if(k.startsWith('scene-copy:')){const o=getItem({kind:'scene',id:k.slice(11)});if(o){RX.sceneClip={layout:o.layout,params:Object.assign({},o.params)};toast('Cena copiada. Selecione outro trecho e use “Colar na seleção”.');drawRight()}}
