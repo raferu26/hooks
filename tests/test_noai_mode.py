@@ -1,4 +1,5 @@
 import json
+import socket
 import sys
 import tempfile
 import unittest
@@ -56,6 +57,16 @@ class NoAiMode(unittest.TestCase):
             '1\n00:00:46,000 --> 00:00:50,000\nIsto veio de um arquivo de legenda\n\n2\n00:00:51,000 --> 00:00:54,000\nSegunda fala importada\n', encoding='utf-8')
         cls.blocker = Blocker()
         sys.meta_path.insert(0, cls.blocker)
+        # nenhuma conexão de rede para fora (modelos, atualizações, telemetria) durante análise, sugestão e render do modo sem IA
+        cls.net_attempts = []
+        cls._connect = socket.socket.connect
+        def guarded(sock, address, *a, **k):
+            host = address[0] if isinstance(address, tuple) else str(address)
+            if host not in ('127.0.0.1', 'localhost', '::1'):
+                cls.net_attempts.append(host)
+                raise OSError('rede bloqueada no teste: ' + host)
+            return cls._connect(sock, address, *a, **k)
+        socket.socket.connect = guarded
         cls.engine = Engine(cls.store)
         profile = cls.store.streamer(cls.streamer)['profile']
         session = cls.store.session(sid)
@@ -67,6 +78,7 @@ class NoAiMode(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         sys.meta_path.remove(cls.blocker)
+        socket.socket.connect = cls._connect
         cls.temp.cleanup()
 
     def test_analysis_is_free_of_models(self):
@@ -112,6 +124,9 @@ class NoAiMode(unittest.TestCase):
     def test_camera_detection_blocked_in_profile(self):
         from liveclips.engine import ai_free
         self.assertTrue(ai_free(self.store.streamer(self.streamer)['profile']))
+
+    def test_no_outbound_network_in_no_ai_mode(self):
+        self.assertEqual(self.net_attempts, [], 'o modo sem IA tentou usar a rede: %s' % self.net_attempts)
 
 
 if __name__ == '__main__':

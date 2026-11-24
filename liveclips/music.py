@@ -13,6 +13,7 @@ import math
 from pathlib import Path
 import re
 import shutil
+import os
 import subprocess
 import tempfile
 import time
@@ -168,7 +169,8 @@ def decode_mono(path, rate=11025, limit=MAX_SECONDS):
     import numpy as np
     args = [media.tool('ffmpeg'), '-nostdin', '-hide_banner', '-loglevel', 'error', '-i', str(path), '-t', str(limit),
             '-vn', '-ac', '1', '-ar', str(rate), '-f', 's16le', '-']
-    process = subprocess.run(args, capture_output=True, timeout=300)
+    flags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0      # sem janela de console piscando no Windows
+    process = subprocess.run(args, capture_output=True, timeout=300, creationflags=flags)
     if process.returncode:
         raise MusicError('Não consegui ler o áudio desta faixa.')
     return np.frombuffer(process.stdout, dtype=np.int16).astype('float32') / 32768.0, rate
