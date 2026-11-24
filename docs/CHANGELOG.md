@@ -102,3 +102,11 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 - **TESTE:** e2e `cmdk_*` (7) e e2e completo sem falhas.
 - **RESULTADO:** média **1,6 letras**; **31/31** em ≤3 letras (Ctrl+K + 1–3 letras + Enter = 4–6 teclas); nenhuma ação inalcançável como 1ª.
 - **Não medido:** descoberta pelo usuário (depende do botão ⌕ e do diálogo `?`); comparação de cliques com a navegação por mouse; pessoas.
+
+## [Áudio clássico: limpeza de ruído híbrida e ducking mais firme] — 24/11/2026 (qualidade de áudio, sem IA)
+- **ANTES (`validacao/medir_audio.py`, sinal sintético com referência limpa):** limpeza leve = passa-alta + `afftdn` (piso −48,2 dBFS em 24 s); ducking da música **3,9 dB** (limiar −24 dBFS ficava acima das falas baixas); consistência de volume com preset `off`: VOL σ 2,8 dB.
+- **ALTERAÇÃO** (`liveclips/media.py`): `denoise_filter()` = `afftdn` + `afwtdn` adaptativo 70% (fallback só `afftdn` se o FFmpeg não tiver `afwtdn`); `sidechaincompress` thr .06/ratio 8/20·350 ms → **thr .03/ratio 10/15·400 ms**. Nenhum modelo, nenhuma dependência nova. RNNoise permanece como estava (plano de saída em `SEM_IA_MIGRACAO.md`).
+- **TESTE:** `tests/test_audio_dsp.py` (4: ruído ≥4 dB melhor sem piorar a fala, fallback, queda do ducking ≥6 dB, pico ≤ −1 dBTP) + 59 testes relacionados OK (`test_pro_audio`, `test_voice_chain`, `test_ligacao_modulos`, `test_modos_qualidade`, `test_corpus_cortes`, `test_audio_dsp`; 2 ignorados por modelo RNNoise não baixado).
+- **RESULTADO:** piso de ruído **−48,2 → −53,4 dBFS** em 24 s (híbrido removeu 6,0/6,0/9,1/9,7 dB a mais em 6/12/24/60 s), SDR da fala igual (±0,05), +0,04 s de processamento por 24 s de áudio; ducking **3,9 → 7,3 dB**; pico verdadeiro ≤ −1,5 dBTP. Detalhes e limites em `docs/AUDIO.md`.
+- **Achado/decisão pendente:** preset de voz `natural` reduz VOL σ de 2,8 para 1,0 dB; hoje o padrão é `off`.
+- **Não validado:** fala real, ruído não estacionário, Windows (versão do FFmpeg), percepção por pessoas.
