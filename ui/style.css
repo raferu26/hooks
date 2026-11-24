@@ -294,18 +294,22 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
 .pub{white-space:pre-wrap;font:12px/1.5 var(--mono);margin:0;max-height:260px;overflow:auto;color:var(--ink)}
 
 /* prévia ao vivo: legenda e título desenhados no navegador por cima do vídeo (unidades relativas à altura do quadro 1280) */
-.live{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden;font-family:"Segoe UI Variable Display","Segoe UI",Arial,sans-serif}
-.live .cap{position:absolute;left:6%;right:6%;text-align:center;line-height:1.12;font-weight:800;color:#fff;text-shadow:0 .25cqh .8cqh #000c;paint-order:stroke fill;-webkit-text-stroke:.35cqh #000}
-.live .cap .w{display:inline-block;margin:0 .35cqh}
+.live{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden;font-family:Arial,"Liberation Sans",Helvetica,sans-serif}   /* a exportação usa Arial por padrão (captions.make_ass): a prévia usa a mesma fonte */
+.live .cap{position:absolute;left:6%;right:6%;text-align:center;line-height:1.12;font-weight:700;color:#fff;text-shadow:0 .25cqh .8cqh #000c;paint-order:stroke fill;-webkit-text-stroke:.35cqh #000}
+.live .cap .w{display:inline-block;margin:0}
 .live .cap .w.on{color:var(--cap-color,#ffd400);transform:scale(1.08)}
-.live .cap.s-clean{font-weight:650;-webkit-text-stroke:.25cqh #000}
-.live .cap.s-minimal{font-weight:500;-webkit-text-stroke:.15cqh #000;font-size:.88em}
-.live .cap.s-bold,.live .cap.s-impact{font-weight:900;text-transform:uppercase;-webkit-text-stroke:.5cqh #000;letter-spacing:.02em}
+.live .cap.s-clean{-webkit-text-stroke:.25cqh #000}
+.live .cap.s-minimal{-webkit-text-stroke:.15cqh #000}
+.live .cap.s-bold,.live .cap.s-impact{-webkit-text-stroke:.5cqh #000}   /* a exportação usa SEMPRE negrito, sem espaçamento extra (Style: Bold=-1, Spacing=0) */
+.live .cap.s-impact{text-transform:uppercase}   /* só o impact usa caixa alta na exportação (CAPTION_STYLES.upper) */
 .live .cap.s-box{-webkit-text-stroke:0;text-shadow:none}
 .live .cap.s-box span.in{background:#000c;border-radius:1.2cqh;padding:.6cqh 1.6cqh;display:inline-block}
-.live .ttl{position:absolute;left:6%;right:6%;text-align:center;font-weight:850;line-height:1.1;color:var(--tc,#fff);-webkit-text-stroke:.4cqh #000;paint-order:stroke fill;text-shadow:0 .3cqh 1cqh #000a}
-.live .ttl.bar{left:0;right:0;-webkit-text-stroke:0;text-shadow:none;background:#000d;padding:1.6cqh 5%}
-.live .ttl.top{font-weight:700}
+.live .ttl{position:absolute;left:6%;right:6%;text-align:center;font-weight:700;line-height:1.1;color:var(--ink,var(--tc,#fff));-webkit-text-stroke:.4cqh #000;paint-order:stroke fill;text-shadow:0 .3cqh 1cqh #000a}
+.live .ttl.t-big{color:var(--tc,#fff)}
+.live .ttl.t-bar,.live .ttl.t-top{-webkit-text-stroke:0;text-shadow:none}
+.live .ttl.t-bar .in{display:inline-block;background:var(--tc,#fff);padding:1.1cqh 1.1cqh}
+.live .ttl.t-top{color:var(--tc,#fff)}
+.live .ttl.t-top .in{display:inline-block;background:#0006;padding:.8cqh .8cqh;letter-spacing:.07cqh;position:relative;top:-.8cqh}
 .live-note{position:absolute;left:8px;bottom:8px;z-index:6;font-size:var(--fs-xs);color:#fff;background:#000a;border-radius:6px;padding:2px 7px;pointer-events:none}
 
 @media(max-width:1180px){.smain{grid-template-columns:240px 1fr 320px}#stFlow,#stPrev,#stSteps{display:none}.settings{grid-template-columns:1fr}.subnav{position:static;display:flex;flex-wrap:wrap}}
@@ -393,3 +397,4 @@ dialog.cmd{width:min(560px,94vw);margin-top:12vh;overflow:hidden}
 .cmd .empty{padding:14px 18px;color:var(--muted)}
 .cmd-foot{padding:8px 16px;border-top:1px solid var(--line)}
 .snapguide{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--aqua);box-shadow:0 0 8px var(--aqua);pointer-events:none;z-index:7;display:none}
+/* classes t-big/t-bar/t-top: a classe `bar` colidia com a barra de progresso global (.bar) e achatava o título em faixa */
