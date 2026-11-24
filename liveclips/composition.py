@@ -344,6 +344,9 @@ def resolve(comp, SW, SH, canvas=CANVAS):
             out['warnings'].append(f'{name}: a região original é pequena e será ampliada {layer["scale"]:.1f}×; ficará suave (a imagem não é reconstruída).')
         if layer['hidden'] > .05:
             out['warnings'].append(f'{name}: {round(layer["hidden"] * 100)}% da região marcada fica fora do quadro (recorte). Use “Mostrar inteiro” para ver tudo.')
+    for layer in layers:
+        if layer['role'] != 'conteudo' and layer['pos'][1] + layer['size'][1] > H * .78 and layer['size'][1] < H * .9:
+            out['warnings'].append(f'{ROLE_LABELS[layer["role"]]} fica na parte de baixo: as legendas podem cobri-la. Ajuste a distância da legenda na aba Legendas.')
     for a in range(len(layers)):
         for b in range(a + 1, len(layers)):
             ra, rb = comp['regions'][layers[a]['role']], comp['regions'][layers[b]['role']]
@@ -389,6 +392,14 @@ def _mask_filters(masks, source, out):
     return parts
 
 
+def _yuv(value):
+    """#RRGGBB → (Y, U, V) em 8 bits, BT.601 de faixa limitada (a mesma conversão do FFmpeg para vídeo sem etiqueta de cor)."""
+    h = HEX.match(value).group(1)
+    r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    return (round(16 + (65.481 * r + 128.553 * g + 24.966 * b) / 255), round(128 + (-37.797 * r - 74.203 * g + 112.0 * b) / 255),
+            round(128 + (112.0 * r - 93.786 * g - 18.214 * b) / 255))
+
+
 def _color(value):
     return '0x' + HEX.match(value).group(1).upper()
 
@@ -402,25 +413,24 @@ def _composite(plan, canvas, source, out, tag, draft=False):
     parts = [f'[{source}]split={count}' + ''.join(f'[{tag}c{i}]' for i in range(count))]
     bg_in = f'{tag}c{count - 1}'
     if bgk == 'blur':
-        if draft:
-            parts.append(f'[{bg_in}]scale={W // 8}:{H // 8}:force_original_aspect_ratio=increase:flags=bilinear,crop={W // 8}:{H // 8},'
-                         f'gblur=sigma=7,scale={W}:{H}:flags=bilinear[{tag}bg]')
-        else:
-            parts.append(f'[{bg_in}]scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,crop={W}:{H},gblur=sigma=28[{tag}bg]')
+        # o fundo é só um borrão: borra em 1/4 do tamanho (sigma 7 ≈ sigma 28 no quadro cheio) e amplia — ~4× mais rápido, mesmo aspecto
+        parts.append(f'[{bg_in}]scale={W // 4}:{H // 4}:force_original_aspect_ratio=increase:flags=bilinear,crop={W // 4}:{H // 4},'
+                     f'gblur=sigma=7,scale={W}:{H}:flags=bilinear,format=yuv420p[{tag}bg]')
     else:
-        color = _color(plan['bg']['color'] if bgk == 'color' else '#000000')
-        parts.append(f'[{bg_in}]scale=64:36:flags=neighbor,scale={W}:{H}:flags=neighbor,drawbox=x=0:y=0:w={W}:h={H}:color={color}:t=fill[{tag}bg]')
+        y, u, v = _yuv(plan['bg']['color'] if bgk == 'color' else '#000000')
+        # fundo sólido: reduz a 2×2, pinta a tabela de cores e amplia (drawbox em quadro cheio custava ~8 s por 20 s de vídeo)
+        parts.append(f'[{bg_in}]scale=2:2:flags=neighbor,format=yuv420p,lutyuv=y={y}:u={u}:v={v},scale={W}:{H}:flags=neighbor[{tag}bg]')
     current = f'{tag}bg'
     for i, layer in enumerate(layers):
         cx, cy, cw, ch = layer['crop']
         ow, oh = layer['size']
-        chain = f'[{tag}c{i}]crop={cw}:{ch}:{cx}:{cy},scale={ow}:{oh}:flags={"bilinear" if draft else "lanczos"},setsar=1'
+        chain = f'[{tag}c{i}]crop={cw}:{ch}:{cx}:{cy},scale={ow}:{oh}:flags={"bilinear" if draft else "lanczos"},format=yuv420p,setsar=1'
         if layer.get('border'):
             chain += f',drawbox=x=0:y=0:w=iw:h=ih:color={_color(layer["border_color"])}:t={layer["border"]}'
         parts.append(chain + f'[{tag}l{i}]')
         label = f'{tag}ovr' if i == len(layers) - 1 else f'{tag}o{i}'
         px, py = layer['pos']
-        parts.append(f'[{current}][{tag}l{i}]overlay={px}:{py}:format=auto[{label}]')
+        parts.append(f'[{current}][{tag}l{i}]overlay={px}:{py}:format=yuv420[{label}]')
         current = label
     parts.append(f'[{current}]setsar=1,format=yuv420p[{out}]')
     return parts

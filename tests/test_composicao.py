@@ -367,10 +367,27 @@ class EndToEndRender(unittest.TestCase):
             with_comp = self.render('final', comp, temp + '/a') if Path(temp, 'a').mkdir() is None else None
             without = self.render('final', None, temp + '/b') if Path(temp, 'b').mkdir() is None else None
             def top_half(clip):
-                raw = subprocess.run([media.tool('ffmpeg'), '-nostdin', '-loglevel', 'error', '-ss', '.5', '-i', str(clip), '-frames:v', '1',
+                raw = subprocess.run([media.tool('ffmpeg'), '-nostdin', '-loglevel', 'error', '-ss', '0.5', '-i', str(clip), '-frames:v', '1',
                                       '-vf', 'format=gray', '-f', 'rawvideo', '-'], capture_output=True, check=True).stdout
                 return np.frombuffer(raw, np.uint8).reshape(1920, 1080).astype(int)
             self.assertGreater(np.abs(top_half(with_comp) - top_half(without)).mean(), 8)
+
+    def test_captions_still_burn_over_the_composition(self):
+        comp = dict(layout='cam_ampliada', regions=dict(webcam=dict(x=.6, y=.05, w=.35, h=.4), conteudo=dict(x=0, y=0, w=.6, h=1)))
+        lines = [dict(start=0, end=4, text='LEGENDA SIMULTANEA TESTE', words=[])]
+        bands = {}
+        for name, enabled in (('on', True), ('off', False)):
+            with tempfile.TemporaryDirectory() as temp:
+                source = self.helper.make_source(temp, seconds=4, size='1280x720', preset='ultrafast')
+                candidate = self.helper.candidate(source, seconds=4)
+                candidate['profile']['content_mode'] = 'video'
+                candidate['data']['project'] = project.clean(dict(composition=comp, captions=dict(enabled=enabled, lines=lines)), 4)
+                clip = media.render(candidate, [], temp, False, pipeline='single')
+                raw = subprocess.run([media.tool('ffmpeg'), '-nostdin', '-loglevel', 'error', '-ss', '0.5', '-i', str(clip), '-frames:v', '1',
+                                      '-vf', 'format=gray', '-f', 'rawvideo', '-'], capture_output=True, check=True).stdout
+                bands[name] = np.frombuffer(raw, np.uint8).reshape(1920, 1080).astype(int)
+        self.assertGreater(np.abs(bands['on'][1200:1700] - bands['off'][1200:1700]).mean(), .5)    # legenda desenhada na faixa inferior
+        self.assertLess(np.abs(bands['on'][:700] - bands['off'][:700]).mean(), .3)                   # e a webcam, no topo, intacta
 
     def test_draft_preview_uses_the_same_composition(self):
         comp = dict(layout='cam_ampliada', regions=dict(webcam=dict(x=.6, y=.05, w=.35, h=.4), conteudo=dict(x=0, y=0, w=.6, h=1)))
