@@ -428,3 +428,4 @@ dialog.cmd{width:min(560px,94vw);margin-top:12vh;overflow:hidden}
 .rx-h.nw{left:-8px;top:-8px;cursor:nwse-resize}.rx-h.ne{right:-8px;top:-8px;cursor:nesw-resize}
 .rx-h.sw{left:-8px;bottom:-8px;cursor:nesw-resize}.rx-h.se{right:-8px;bottom:-8px;cursor:nwse-resize}
 .rx-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:var(--fs-sm);background:rgba(0,0,0,.4);line-height:1.3;text-align:center;padding:12px}
+.blk.scene{background:#5b3a8a;color:#efe3ff}

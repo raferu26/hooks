@@ -118,7 +118,7 @@ function selectionOp(op){const [a0,b0]=range();const a=r2(a0),b=r2(b0);
 /* ───── painel direito ───── */
 /* ───── inspetor contextual: o item selecionado no topo; o resto do corte em seções recolhíveis ───── */
 const SECTIONS=[['style','Estilo, cor e som','style'],['caps','Legendas','caps'],['titles','Títulos','title'],['music','Música','music'],['fx','Cortes e efeitos','fx'],['frame','Layout e imagens','frame'],['ai','Sugestões','agent'],['why','Por quê','shield'],['pub','Publicar','send']];
-const KIND_LABEL={cut:'Corte manual',zoom:'Zoom',title:'Título',teaser:'Abertura',sfx:'Efeito sonoro',speed:'Velocidade',freeze:'Imagem congelada',image:'Imagem'};
+const KIND_LABEL={scene:'Cena de reação',cut:'Corte manual',zoom:'Zoom',title:'Título',teaser:'Abertura',sfx:'Efeito sonoro',speed:'Velocidade',freeze:'Imagem congelada',image:'Imagem'};
 function secSummary(id){const P=ST.proj,d=ST.data;
  if(id==='style'){const st=(d.catalog.styles.find(x=>x.id===(P.style||d.profile.style))||{}).label||'';return st+(P.voice.clean?' · voz limpa':'')+(P.teaser?' · com abertura':'')}
  if(id==='caps')return P.captions.enabled?(CAP_LABELS[P.captions.style||d.profile.caption_style]||'Ligadas'):'Desligadas';
@@ -140,6 +140,7 @@ function itemEditor(){const it=ST.item,P=ST.proj;if(!it)return '';const o=getIte
  if(it.kind==='freeze'){const i=P.freezes.findIndex(z=>z.id===it.id);b=`${num(`freezes.${i}.at`,'Em (s)',o.at)}${rng(`freezes.${i}.duration`,'Parada por',.3,3,.1,o.duration,v=>(+v).toFixed(1)+' s')}`;del=`freezes:${i}`}
  if(it.kind==='image'){const i=P.overlays.findIndex(z=>z.id===it.id);b=`<div class="row"><img class="thumb-s" src="/media/image?id=${o.image}" alt=""><div class="two grow">${num(`overlays.${i}.start`,'De (s)',o.start)}${num(`overlays.${i}.end`,'Até (s)',o.end)}</div></div>${rng(`overlays.${i}.x`,'Horizontal',0,1,.01,o.x,v=>Math.round(v*100)+'%')}${rng(`overlays.${i}.y`,'Vertical',0,1,.01,o.y,v=>Math.round(v*100)+'%')}${rng(`overlays.${i}.scale`,'Tamanho',.08,1,.01,o.scale,v=>Math.round(v*100)+'%')}${rng(`overlays.${i}.opacity`,'Opacidade',.1,1,.05,o.opacity,v=>Math.round(v*100)+'%')}`;del=`overlays:${i}`}
  if(it.kind==='sfx'){const i=P.sfx.findIndex(z=>z.id===it.id);b=`<p class="help" style="margin:0">${esc((ST.data.catalog.sfx.find(x=>x.id===o.kind)||{}).label||o.kind)}</p>${num(`sfx.${i}.at`,'Em (s)',o.at)}${rng(`sfx.${i}.volume`,'Volume',.05,1,.05,o.volume,v=>Math.round(v*100)+'%')}`;del=`sfx:${i}`}
+ if(it.kind==='scene'){const i=P.composition.scenes.findIndex(z=>z.id===it.id);b=rxSceneEditor(o,i);del='scene:'+it.id}
  if(it.kind==='teaser'){if(!P.teaser)return '';b=`<p class="help" style="margin:0">Abre com ${clock(P.teaser.start,1)}–${clock(P.teaser.end,1)} (${(P.teaser.end-P.teaser.start).toFixed(1)} s); depois o corte começa do início, com flash e whoosh.</p>`;del='teaser'}
  return `<div class="insp-item" role="region" aria-label="${KIND_LABEL[it.kind]} selecionado"><div class="row"><b class="grow">${KIND_LABEL[it.kind]}</b><button class="small quiet danger" ${del==='teaser'?'data-act="rmteaser"':`data-del="${del}"`} title="Remover (Delete)">Remover</button><button class="small quiet" data-act="deselect" title="Fechar (Esc)" aria-label="Fechar">✕</button></div>${b}</div>`}
 function drawRight(){const el=$('stRight'),top=el.scrollTop;const d=ST.data;
@@ -327,7 +328,7 @@ const X=t=>t*ST.pps,T_=x=>x/ST.pps;
 /* 3 pistas fixas (Vídeo, Legendas, Áudio); Zoom, Ritmo, Imagens e Títulos aparecem quando têm conteúdo
    (ou sempre, com "Todas as pistas"). */
 function tlRows(){const P=ST.proj,all=PREF.allTracks,autoZ=(ST.data.decisions||[]).some(x=>x.kind==='zoom'&&(ST.overrides[x.id]??x.enabled));
- const r=[['video','Vídeo',30,true],['zoom','Zoom',30,all||P.zooms.length||autoZ],['speed','Ritmo',30,all||P.speeds.length||P.freezes.length],['image','Imagens',30,all||P.overlays.length],['speech','Legendas',30,true],['title','Títulos',30,all||P.titles.length||P.teaser],['audio','Áudio',36,true]].filter(x=>x[3]);
+ const r=[['video','Vídeo',30,true],['scene','Layout',30,all||!!(P.composition&&(P.composition.scenes||[]).length)],['zoom','Zoom',30,all||P.zooms.length||autoZ],['speed','Ritmo',30,all||P.speeds.length||P.freezes.length],['image','Imagens',30,all||P.overlays.length],['speech','Legendas',30,true],['title','Títulos',30,all||P.titles.length||P.teaser],['audio','Áudio',36,true]].filter(x=>x[3]);
  let top=26;return r.map(([k,label,h])=>{const o={k,label,h,top};top+=h;return o})}
 function drawTimeline(){if(!ST.open)return;const D=dur(),W=Math.ceil(D*ST.pps)+24,P=ST.proj,rows=tlRows(),R=Object.fromEntries(rows.map(x=>[x.k,x.top])),H=rows.reduce((a,x)=>a+x.h,26);
  $('tlHeads').innerHTML='<div></div>'+rows.map(x=>`<div style="height:${x.h}px">${x.label}</div>`).join('');
@@ -344,6 +345,7 @@ function drawTimeline(){if(!ST.open)return;const D=dur(),W=Math.ceil(D*ST.pps)+2
  else P.zooms.forEach(z=>{h+=`<div class="tick-mark zoom" style="left:${X(z.start)}px;top:${R.video}px" title="zoom"></div>`});
  if(R.title!=null){P.titles.forEach(t=>{h+=blk('title',t.start,t.end,R.title,t.text,'data-kind="title" data-key="'+t.id+'"',true,ST.item?.kind==='title'&&ST.item.id===t.id)});
   if(P.teaser)h+=blk('teaser',P.teaser.start,P.teaser.end,R.title,'abertura','data-kind="teaser" data-key="t"',true,ST.item?.kind==='teaser')}
+ if(R.scene!=null){((P.composition||{}).scenes||[]).forEach(sc=>{h+=blk('scene',sc.start,sc.end,R.scene,rxLayout(sc.layout).label+(sc.fade?' ↔':''),'data-kind="scene" data-key="'+sc.id+'"',true,ST.item?.kind==='scene'&&ST.item.id===sc.id)})}
  if(R.speed!=null){P.speeds.forEach(v=>{h+=blk('speed',v.start,v.end,R.speed,fmtRate(v.rate),'data-kind="speed" data-key="'+v.id+'"',true,ST.item?.kind==='speed'&&ST.item.id===v.id)});
   P.freezes.forEach(f=>{h+=`<div class="mark freeze${ST.item?.kind==='freeze'&&ST.item.id===f.id?' sel':''}" data-kind="freeze" data-key="${f.id}" style="left:${X(f.at)}px;top:${R.speed+4}px" title="congelar ${f.duration}s">❄</div>`})}
  if(R.image!=null)P.overlays.forEach(o=>{h+=blk('image',o.start,o.end,R.image,'imagem','data-kind="image" data-key="'+o.id+'"',true,ST.item?.kind==='image'&&ST.item.id===o.id)});
@@ -354,11 +356,11 @@ function drawTimeline(){if(!ST.open)return;const D=dur(),W=Math.ceil(D*ST.pps)+2
  if(ST.sel)h+=`<div class="selrange" style="left:${X(ST.sel.a)}px;width:${X(ST.sel.b-ST.sel.a)}px"></div>`;
  h+=`<div class="playhead" id="playhead" style="left:${X(curClip())}px"></div></div>`;
  const sc=$('tlScroll'),left=sc.scrollLeft;$('tl').outerHTML=h;sc.scrollLeft=left;$('selInfo').textContent=ST.sel?`Seleção ${clock(ST.sel.a,1)}–${clock(ST.sel.b,1)} (${(ST.sel.b-ST.sel.a).toFixed(1)}s) · C corta`:'Arraste na régua ou nas pistas para selecionar um trecho.';$('tlAll').setAttribute('aria-pressed',PREF.allTracks)}
-function getItem(it){if(!it)return null;const P=ST.proj;if(it.kind==='cut')return P.cuts.find(c=>c._k===it.k);if(it.kind==='zoom')return P.zooms.find(z=>z.id===it.id);if(it.kind==='title')return P.titles.find(z=>z.id===it.id);if(it.kind==='teaser')return P.teaser;if(it.kind==='sfx')return P.sfx.find(e=>e.id===it.id);if(it.kind==='speed')return P.speeds.find(e=>e.id===it.id);if(it.kind==='freeze')return P.freezes.find(e=>e.id===it.id);if(it.kind==='image')return P.overlays.find(e=>e.id===it.id)}
+function getItem(it){if(!it)return null;const P=ST.proj;if(it.kind==='cut')return P.cuts.find(c=>c._k===it.k);if(it.kind==='zoom')return P.zooms.find(z=>z.id===it.id);if(it.kind==='title')return P.titles.find(z=>z.id===it.id);if(it.kind==='teaser')return P.teaser;if(it.kind==='sfx')return P.sfx.find(e=>e.id===it.id);if(it.kind==='speed')return P.speeds.find(e=>e.id===it.id);if(it.kind==='freeze')return P.freezes.find(e=>e.id===it.id);if(it.kind==='image')return P.overlays.find(e=>e.id===it.id);if(it.kind==='scene')return((P.composition||{}).scenes||[]).find(e=>e.id===it.id)}
 const tlX=e=>e.clientX-$('tl').getBoundingClientRect().left;
 /* Durante o arrasto só o bloco movido muda de lugar: evita reconstruir a linha do tempo inteira a cada pointermove (N5). Itens sem bloco (SFX/congelar) caem no redesenho completo. */
 function dragPaint(b,it,kind){if(b&&b.isConnected&&b.classList.contains('blk')&&kind!=='sfx'&&kind!=='freeze'){b.style.left=X(it.start)+'px';b.style.width=Math.max(6,X(it.end-it.start))+'px'}else drawTimeline();paintGuide()}
-function snapTargets(self){const P=ST.proj,t=[0,dur(),ST.cursor||0];for(const k of ['cuts','zooms','titles','speeds','overlays'])for(const x of P[k]||[])if(x!==self){t.push(x.start,x.end)}for(const k of ['sfx','freezes'])for(const x of P[k]||[])if(x!==self)t.push(x.at);return t}
+function snapTargets(self){const P=ST.proj,t=[0,dur(),ST.cursor||0];for(const k of ['cuts','zooms','titles','speeds','overlays'])for(const x of P[k]||[])if(x!==self){t.push(x.start,x.end)}for(const x of (P.composition&&P.composition.scenes)||[])if(x!==self)t.push(x.start,x.end);for(const k of ['sfx','freezes'])for(const x of P[k]||[])if(x!==self)t.push(x.at);return t}
 /* Alinha ao alvo mais próximo (cursor, bordas de outros itens, início/fim) até 8 px. Alt desliga. */
 const SNAP={hit:null};
 function snapTo(v,self){const th=8/(ST.pps||1);let best=v,d=th;SNAP.hit=null;for(const x of snapTargets(self)){const k=Math.abs(x-v);if(k<d){d=k;best=x;SNAP.hit=x}}return best}
@@ -502,7 +504,7 @@ document.addEventListener('keydown',e=>{if(!ST.open||document.querySelector('dia
  if(k==='ArrowLeft'||k==='ArrowRight'){e.preventDefault();const step=(e.shiftKey?5:1)*(k==='ArrowLeft'?-1:1);seekClip(clamp(curClip()+step,0,dur()));return}
  if(k==='+'||k==='='){ $('tlIn').click();return}
  if(k==='-'){ $('tlOut').click();return}
- if(k==='Delete'||k==='Backspace'){const it=ST.item;if(!it)return;e.preventDefault();mutate(()=>{const P=ST.proj;if(it.kind==='cut')P.cuts=P.cuts.filter(c=>c._k!==it.k);if(it.kind==='zoom')P.zooms=P.zooms.filter(z=>z.id!==it.id);if(it.kind==='title')P.titles=P.titles.filter(z=>z.id!==it.id);if(it.kind==='teaser')P.teaser=null;if(it.kind==='sfx')P.sfx=P.sfx.filter(z=>z.id!==it.id);if(it.kind==='speed')P.speeds=P.speeds.filter(z=>z.id!==it.id);if(it.kind==='freeze')P.freezes=P.freezes.filter(z=>z.id!==it.id);if(it.kind==='image')P.overlays=P.overlays.filter(z=>z.id!==it.id);ST.item=null});return}
+ if(k==='Delete'||k==='Backspace'){const it=ST.item;if(!it)return;e.preventDefault();mutate(()=>{const P=ST.proj;if(it.kind==='cut')P.cuts=P.cuts.filter(c=>c._k!==it.k);if(it.kind==='zoom')P.zooms=P.zooms.filter(z=>z.id!==it.id);if(it.kind==='title')P.titles=P.titles.filter(z=>z.id!==it.id);if(it.kind==='teaser')P.teaser=null;if(it.kind==='sfx')P.sfx=P.sfx.filter(z=>z.id!==it.id);if(it.kind==='speed')P.speeds=P.speeds.filter(z=>z.id!==it.id);if(it.kind==='freeze')P.freezes=P.freezes.filter(z=>z.id!==it.id);if(it.kind==='image')P.overlays=P.overlays.filter(z=>z.id!==it.id);if(it.kind==='scene'&&P.composition)P.composition.scenes=(P.composition.scenes||[]).filter(z=>z.id!==it.id);ST.item=null});return}
  if(k.toLowerCase()==='c'&&ST.sel){selectionOp('cut');return}
  if(k==='Escape'){ST.sel=null;ST.anchor=null;ST.item=null;drawLeft();drawTimeline();drawRight()}});
 $('stKeys').onclick=showKeys;

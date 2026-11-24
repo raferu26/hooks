@@ -432,6 +432,7 @@ dialog.cmd{width:min(560px,94vw);margin-top:12vh;overflow:hidden}
 .rx-h.nw{left:-8px;top:-8px;cursor:nwse-resize}.rx-h.ne{right:-8px;top:-8px;cursor:nesw-resize}
 .rx-h.sw{left:-8px;bottom:-8px;cursor:nesw-resize}.rx-h.se{right:-8px;bottom:-8px;cursor:nwse-resize}
 .rx-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:var(--fs-sm);background:rgba(0,0,0,.4);line-height:1.3;text-align:center;padding:12px}
+.blk.scene{background:#5b3a8a;color:#efe3ff}
 
 </style></head>
 <body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -1001,7 +1002,7 @@ function selectionOp(op){const [a0,b0]=range();const a=r2(a0),b=r2(b0);
 /* ───── painel direito ───── */
 /* ───── inspetor contextual: o item selecionado no topo; o resto do corte em seções recolhíveis ───── */
 const SECTIONS=[['style','Estilo, cor e som','style'],['caps','Legendas','caps'],['titles','Títulos','title'],['music','Música','music'],['fx','Cortes e efeitos','fx'],['frame','Layout e imagens','frame'],['ai','Sugestões','agent'],['why','Por quê','shield'],['pub','Publicar','send']];
-const KIND_LABEL={cut:'Corte manual',zoom:'Zoom',title:'Título',teaser:'Abertura',sfx:'Efeito sonoro',speed:'Velocidade',freeze:'Imagem congelada',image:'Imagem'};
+const KIND_LABEL={scene:'Cena de reação',cut:'Corte manual',zoom:'Zoom',title:'Título',teaser:'Abertura',sfx:'Efeito sonoro',speed:'Velocidade',freeze:'Imagem congelada',image:'Imagem'};
 function secSummary(id){const P=ST.proj,d=ST.data;
  if(id==='style'){const st=(d.catalog.styles.find(x=>x.id===(P.style||d.profile.style))||{}).label||'';return st+(P.voice.clean?' · voz limpa':'')+(P.teaser?' · com abertura':'')}
  if(id==='caps')return P.captions.enabled?(CAP_LABELS[P.captions.style||d.profile.caption_style]||'Ligadas'):'Desligadas';
@@ -1023,6 +1024,7 @@ function itemEditor(){const it=ST.item,P=ST.proj;if(!it)return '';const o=getIte
  if(it.kind==='freeze'){const i=P.freezes.findIndex(z=>z.id===it.id);b=`${num(`freezes.${i}.at`,'Em (s)',o.at)}${rng(`freezes.${i}.duration`,'Parada por',.3,3,.1,o.duration,v=>(+v).toFixed(1)+' s')}`;del=`freezes:${i}`}
  if(it.kind==='image'){const i=P.overlays.findIndex(z=>z.id===it.id);b=`<div class="row"><img class="thumb-s" src="/media/image?id=${o.image}" alt=""><div class="two grow">${num(`overlays.${i}.start`,'De (s)',o.start)}${num(`overlays.${i}.end`,'Até (s)',o.end)}</div></div>${rng(`overlays.${i}.x`,'Horizontal',0,1,.01,o.x,v=>Math.round(v*100)+'%')}${rng(`overlays.${i}.y`,'Vertical',0,1,.01,o.y,v=>Math.round(v*100)+'%')}${rng(`overlays.${i}.scale`,'Tamanho',.08,1,.01,o.scale,v=>Math.round(v*100)+'%')}${rng(`overlays.${i}.opacity`,'Opacidade',.1,1,.05,o.opacity,v=>Math.round(v*100)+'%')}`;del=`overlays:${i}`}
  if(it.kind==='sfx'){const i=P.sfx.findIndex(z=>z.id===it.id);b=`<p class="help" style="margin:0">${esc((ST.data.catalog.sfx.find(x=>x.id===o.kind)||{}).label||o.kind)}</p>${num(`sfx.${i}.at`,'Em (s)',o.at)}${rng(`sfx.${i}.volume`,'Volume',.05,1,.05,o.volume,v=>Math.round(v*100)+'%')}`;del=`sfx:${i}`}
+ if(it.kind==='scene'){const i=P.composition.scenes.findIndex(z=>z.id===it.id);b=rxSceneEditor(o,i);del='scene:'+it.id}
  if(it.kind==='teaser'){if(!P.teaser)return '';b=`<p class="help" style="margin:0">Abre com ${clock(P.teaser.start,1)}–${clock(P.teaser.end,1)} (${(P.teaser.end-P.teaser.start).toFixed(1)} s); depois o corte começa do início, com flash e whoosh.</p>`;del='teaser'}
  return `<div class="insp-item" role="region" aria-label="${KIND_LABEL[it.kind]} selecionado"><div class="row"><b class="grow">${KIND_LABEL[it.kind]}</b><button class="small quiet danger" ${del==='teaser'?'data-act="rmteaser"':`data-del="${del}"`} title="Remover (Delete)">Remover</button><button class="small quiet" data-act="deselect" title="Fechar (Esc)" aria-label="Fechar">✕</button></div>${b}</div>`}
 function drawRight(){const el=$('stRight'),top=el.scrollTop;const d=ST.data;
@@ -1210,7 +1212,7 @@ const X=t=>t*ST.pps,T_=x=>x/ST.pps;
 /* 3 pistas fixas (Vídeo, Legendas, Áudio); Zoom, Ritmo, Imagens e Títulos aparecem quando têm conteúdo
    (ou sempre, com "Todas as pistas"). */
 function tlRows(){const P=ST.proj,all=PREF.allTracks,autoZ=(ST.data.decisions||[]).some(x=>x.kind==='zoom'&&(ST.overrides[x.id]??x.enabled));
- const r=[['video','Vídeo',30,true],['zoom','Zoom',30,all||P.zooms.length||autoZ],['speed','Ritmo',30,all||P.speeds.length||P.freezes.length],['image','Imagens',30,all||P.overlays.length],['speech','Legendas',30,true],['title','Títulos',30,all||P.titles.length||P.teaser],['audio','Áudio',36,true]].filter(x=>x[3]);
+ const r=[['video','Vídeo',30,true],['scene','Layout',30,all||!!(P.composition&&(P.composition.scenes||[]).length)],['zoom','Zoom',30,all||P.zooms.length||autoZ],['speed','Ritmo',30,all||P.speeds.length||P.freezes.length],['image','Imagens',30,all||P.overlays.length],['speech','Legendas',30,true],['title','Títulos',30,all||P.titles.length||P.teaser],['audio','Áudio',36,true]].filter(x=>x[3]);
  let top=26;return r.map(([k,label,h])=>{const o={k,label,h,top};top+=h;return o})}
 function drawTimeline(){if(!ST.open)return;const D=dur(),W=Math.ceil(D*ST.pps)+24,P=ST.proj,rows=tlRows(),R=Object.fromEntries(rows.map(x=>[x.k,x.top])),H=rows.reduce((a,x)=>a+x.h,26);
  $('tlHeads').innerHTML='<div></div>'+rows.map(x=>`<div style="height:${x.h}px">${x.label}</div>`).join('');
@@ -1227,6 +1229,7 @@ function drawTimeline(){if(!ST.open)return;const D=dur(),W=Math.ceil(D*ST.pps)+2
  else P.zooms.forEach(z=>{h+=`<div class="tick-mark zoom" style="left:${X(z.start)}px;top:${R.video}px" title="zoom"></div>`});
  if(R.title!=null){P.titles.forEach(t=>{h+=blk('title',t.start,t.end,R.title,t.text,'data-kind="title" data-key="'+t.id+'"',true,ST.item?.kind==='title'&&ST.item.id===t.id)});
   if(P.teaser)h+=blk('teaser',P.teaser.start,P.teaser.end,R.title,'abertura','data-kind="teaser" data-key="t"',true,ST.item?.kind==='teaser')}
+ if(R.scene!=null){((P.composition||{}).scenes||[]).forEach(sc=>{h+=blk('scene',sc.start,sc.end,R.scene,rxLayout(sc.layout).label+(sc.fade?' ↔':''),'data-kind="scene" data-key="'+sc.id+'"',true,ST.item?.kind==='scene'&&ST.item.id===sc.id)})}
  if(R.speed!=null){P.speeds.forEach(v=>{h+=blk('speed',v.start,v.end,R.speed,fmtRate(v.rate),'data-kind="speed" data-key="'+v.id+'"',true,ST.item?.kind==='speed'&&ST.item.id===v.id)});
   P.freezes.forEach(f=>{h+=`<div class="mark freeze${ST.item?.kind==='freeze'&&ST.item.id===f.id?' sel':''}" data-kind="freeze" data-key="${f.id}" style="left:${X(f.at)}px;top:${R.speed+4}px" title="congelar ${f.duration}s">❄</div>`})}
  if(R.image!=null)P.overlays.forEach(o=>{h+=blk('image',o.start,o.end,R.image,'imagem','data-kind="image" data-key="'+o.id+'"',true,ST.item?.kind==='image'&&ST.item.id===o.id)});
@@ -1237,11 +1240,11 @@ function drawTimeline(){if(!ST.open)return;const D=dur(),W=Math.ceil(D*ST.pps)+2
  if(ST.sel)h+=`<div class="selrange" style="left:${X(ST.sel.a)}px;width:${X(ST.sel.b-ST.sel.a)}px"></div>`;
  h+=`<div class="playhead" id="playhead" style="left:${X(curClip())}px"></div></div>`;
  const sc=$('tlScroll'),left=sc.scrollLeft;$('tl').outerHTML=h;sc.scrollLeft=left;$('selInfo').textContent=ST.sel?`Seleção ${clock(ST.sel.a,1)}–${clock(ST.sel.b,1)} (${(ST.sel.b-ST.sel.a).toFixed(1)}s) · C corta`:'Arraste na régua ou nas pistas para selecionar um trecho.';$('tlAll').setAttribute('aria-pressed',PREF.allTracks)}
-function getItem(it){if(!it)return null;const P=ST.proj;if(it.kind==='cut')return P.cuts.find(c=>c._k===it.k);if(it.kind==='zoom')return P.zooms.find(z=>z.id===it.id);if(it.kind==='title')return P.titles.find(z=>z.id===it.id);if(it.kind==='teaser')return P.teaser;if(it.kind==='sfx')return P.sfx.find(e=>e.id===it.id);if(it.kind==='speed')return P.speeds.find(e=>e.id===it.id);if(it.kind==='freeze')return P.freezes.find(e=>e.id===it.id);if(it.kind==='image')return P.overlays.find(e=>e.id===it.id)}
+function getItem(it){if(!it)return null;const P=ST.proj;if(it.kind==='cut')return P.cuts.find(c=>c._k===it.k);if(it.kind==='zoom')return P.zooms.find(z=>z.id===it.id);if(it.kind==='title')return P.titles.find(z=>z.id===it.id);if(it.kind==='teaser')return P.teaser;if(it.kind==='sfx')return P.sfx.find(e=>e.id===it.id);if(it.kind==='speed')return P.speeds.find(e=>e.id===it.id);if(it.kind==='freeze')return P.freezes.find(e=>e.id===it.id);if(it.kind==='image')return P.overlays.find(e=>e.id===it.id);if(it.kind==='scene')return((P.composition||{}).scenes||[]).find(e=>e.id===it.id)}
 const tlX=e=>e.clientX-$('tl').getBoundingClientRect().left;
 /* Durante o arrasto só o bloco movido muda de lugar: evita reconstruir a linha do tempo inteira a cada pointermove (N5). Itens sem bloco (SFX/congelar) caem no redesenho completo. */
 function dragPaint(b,it,kind){if(b&&b.isConnected&&b.classList.contains('blk')&&kind!=='sfx'&&kind!=='freeze'){b.style.left=X(it.start)+'px';b.style.width=Math.max(6,X(it.end-it.start))+'px'}else drawTimeline();paintGuide()}
-function snapTargets(self){const P=ST.proj,t=[0,dur(),ST.cursor||0];for(const k of ['cuts','zooms','titles','speeds','overlays'])for(const x of P[k]||[])if(x!==self){t.push(x.start,x.end)}for(const k of ['sfx','freezes'])for(const x of P[k]||[])if(x!==self)t.push(x.at);return t}
+function snapTargets(self){const P=ST.proj,t=[0,dur(),ST.cursor||0];for(const k of ['cuts','zooms','titles','speeds','overlays'])for(const x of P[k]||[])if(x!==self){t.push(x.start,x.end)}for(const x of (P.composition&&P.composition.scenes)||[])if(x!==self)t.push(x.start,x.end);for(const k of ['sfx','freezes'])for(const x of P[k]||[])if(x!==self)t.push(x.at);return t}
 /* Alinha ao alvo mais próximo (cursor, bordas de outros itens, início/fim) até 8 px. Alt desliga. */
 const SNAP={hit:null};
 function snapTo(v,self){const th=8/(ST.pps||1);let best=v,d=th;SNAP.hit=null;for(const x of snapTargets(self)){const k=Math.abs(x-v);if(k<d){d=k;best=x;SNAP.hit=x}}return best}
@@ -1385,7 +1388,7 @@ document.addEventListener('keydown',e=>{if(!ST.open||document.querySelector('dia
  if(k==='ArrowLeft'||k==='ArrowRight'){e.preventDefault();const step=(e.shiftKey?5:1)*(k==='ArrowLeft'?-1:1);seekClip(clamp(curClip()+step,0,dur()));return}
  if(k==='+'||k==='='){ $('tlIn').click();return}
  if(k==='-'){ $('tlOut').click();return}
- if(k==='Delete'||k==='Backspace'){const it=ST.item;if(!it)return;e.preventDefault();mutate(()=>{const P=ST.proj;if(it.kind==='cut')P.cuts=P.cuts.filter(c=>c._k!==it.k);if(it.kind==='zoom')P.zooms=P.zooms.filter(z=>z.id!==it.id);if(it.kind==='title')P.titles=P.titles.filter(z=>z.id!==it.id);if(it.kind==='teaser')P.teaser=null;if(it.kind==='sfx')P.sfx=P.sfx.filter(z=>z.id!==it.id);if(it.kind==='speed')P.speeds=P.speeds.filter(z=>z.id!==it.id);if(it.kind==='freeze')P.freezes=P.freezes.filter(z=>z.id!==it.id);if(it.kind==='image')P.overlays=P.overlays.filter(z=>z.id!==it.id);ST.item=null});return}
+ if(k==='Delete'||k==='Backspace'){const it=ST.item;if(!it)return;e.preventDefault();mutate(()=>{const P=ST.proj;if(it.kind==='cut')P.cuts=P.cuts.filter(c=>c._k!==it.k);if(it.kind==='zoom')P.zooms=P.zooms.filter(z=>z.id!==it.id);if(it.kind==='title')P.titles=P.titles.filter(z=>z.id!==it.id);if(it.kind==='teaser')P.teaser=null;if(it.kind==='sfx')P.sfx=P.sfx.filter(z=>z.id!==it.id);if(it.kind==='speed')P.speeds=P.speeds.filter(z=>z.id!==it.id);if(it.kind==='freeze')P.freezes=P.freezes.filter(z=>z.id!==it.id);if(it.kind==='image')P.overlays=P.overlays.filter(z=>z.id!==it.id);if(it.kind==='scene'&&P.composition)P.composition.scenes=(P.composition.scenes||[]).filter(z=>z.id!==it.id);ST.item=null});return}
  if(k.toLowerCase()==='c'&&ST.sel){selectionOp('cut');return}
  if(k==='Escape'){ST.sel=null;ST.anchor=null;ST.item=null;drawLeft();drawTimeline();drawRight()}});
 $('stKeys').onclick=showKeys;
@@ -1450,6 +1453,7 @@ function reacaoHtml(d,P){const cat=rxCat(),c=P.composition,main=cat.layouts.filt
  if(lay.roles.includes('conteudo'))h+=rxFitBlock(c,p,'content','Conteúdo');
  h+=`<div class="fld"><label>Fundo (onde sobra espaço)</label><select data-rxf="bg" data-t="str">${[['black','Preto'],['color','Cor sólida'],['blur','Desfocado (do próprio vídeo)']].map(([k,t])=>`<option value="${k}" ${p.bg===k?'selected':''}>${t}</option>`).join('')}</select></div>`;
  if(p.bg==='color')h+=`<div class="fld"><label>Cor do fundo</label><input type="color" data-rxf="bg_color" data-t="str" value="${p.bg_color}"></div>`;
+ h+=rxScenesHtml(c);
  h+=rxApplyHtml();
  return h+`<p class="help">A prévia acima usa um quadro do vídeo e as mesmas regras da exportação. A prévia em vídeo (P) mostra o resultado real.</p>`+rxRemove()}
 function rxPresetsHtml(c){const L=RX.presets;if(!L)return '';const sel=L.find(p=>p.id===RX.presetSel);
@@ -1464,6 +1468,27 @@ function rxApplyHtml(){const me=state.candidates.find(x=>x.id===ST.id);if(!me)re
  return h}
 async function rxLoadPresets(){try{RX.presets=(await api('/api/composition/presets',{action:'list',id:ST.id})).presets;drawRight()}catch(e){RX.presets=[]}}
 async function rxPresetCall(body){try{RX.presets=(await api('/api/composition/presets',Object.assign({id:ST.id},body))).presets;drawRight();return true}catch(e){toast(e.message,true);return false}}
+const RX_FADES=[[0,'Corte direto'],[.3,'Suave (0,3 s)'],[.6,'Suave (0,6 s)']];
+function rxSceneEditor(o,i){const c=rxComp(),L=rxCat().layouts,base=`composition.scenes.${i}`;
+ const miss=rxMissing({layout:o.layout,regions:c.regions});
+ return `<div class="field"><label>Layout nesta cena</label><select data-f="${base}.layout" data-t="str">${L.map(l=>`<option value="${l.id}" ${o.layout===l.id?'selected':''}>${esc(l.label)}</option>`).join('')}</select></div>
+ <div class="two"><div><label>De (s)</label><input type="number" step=".1" min="0" data-f="${base}.start" data-t="num" value="${o.start}"></div><div><label>Até (s)</label><input type="number" step=".1" min="0" data-f="${base}.end" data-t="num" value="${o.end}"></div></div>
+ <div class="field"><label>Transição ao entrar e ao sair</label><select data-f="${base}.fade" data-t="num">${RX_FADES.map(([v,t])=>`<option value="${v}" ${(+o.fade||0)===v?'selected':''}>${t}</option>`).join('')}</select></div>
+ ${miss.length?`<div class="banner">Este layout precisa de ${miss.map(r=>RX_ROLE[r]).join(' e ')}, que ainda não foi marcada. A cena é ignorada até lá.</div>`:''}
+ <div class="row"><button class="small" data-rx="scene-copy:${o.id}" title="Copia o layout e os ajustes desta cena">Copiar</button><button class="small" data-rx="scene-params:${o.id}" title="Usa os ajustes do layout principal nesta cena">Usar ajustes do principal</button></div>
+ <p class="help" style="margin:0">${(o.end-o.start).toFixed(1)} s. Ao exportar, a cena acompanha cortes, velocidade e replays.</p>`}
+function rxScenesHtml(c){const sc=(c.scenes||[]);
+ let h=`<h4 aria-level="3">Cenas de reação</h4><p class="help">Troque o layout em partes do clipe (por exemplo, foco na reação enquanto o streamer comenta). Fora das cenas vale o layout principal.</p>`;
+ h+=`<div class="row"><button class="small" data-rx="scene-add">＋ Cena na seleção</button>${RX.sceneClip?`<button class="small" data-rx="scene-paste">Colar na seleção</button>`:''}</div>`;
+ if(sc.length)h+=`<div class="list">${sc.map(x=>`<div class="item ${ST.item?.kind==='scene'&&ST.item.id===x.id?'sel':''}" data-pick="scene:${x.id}"><div class="row"><b class="grow">${esc(rxLayout(x.layout).label)}</b><span class="muted small">${clock(x.start,1)}–${clock(x.end,1)}${x.fade?' · suave':''}</span></div></div>`).join('')}</div>`;
+ const bad=sc.some((a,k)=>k&&a.start<sc[k-1].end-.001);if(bad)h+=`<div class="banner">Há cenas sobrepostas: ajuste os tempos (não é possível salvar assim).</div>`;
+ return h}
+function rxPickSceneLayout(){const c=rxComp();return c.layout==='foco_reacao'?'cam_ampliada':'foco_reacao'}
+function rxNewScene(layout,params){const sorted=((ST.proj.composition.scenes)||[]).slice().sort((a,b)=>a.start-b.start);const [a0,b0]=range(3),a=r2(a0),b=r2(b0);
+ if(b-a<.4)return toast('Selecione pelo menos 0,4 s na linha do tempo (ou posicione o cursor antes do fim).',true);
+ if(sorted.some(x=>a<x.end&&b>x.start))return toast('Esse trecho já tem outra cena.',true);
+ const sc={id:uidc('e'),start:a,end:b,layout,params:Object.assign({},params||{}),fade:0};
+ mutate(()=>{const c=ST.proj.composition;c.scenes=(c.scenes||[]).concat([sc]).sort((x,y)=>x.start-y.start);ST.item={kind:'scene',id:sc.id}})}
 function rxRemove(){return `<div><button class="small quiet danger" data-rx="remove">Voltar ao enquadramento padrão</button></div>`}
 
 /* ───────── prévia imediata (canvas) ───────── */
@@ -1471,11 +1496,15 @@ function rxFrameUrl(t){return `/media/srcframe?id=${encodeURIComponent(ST.id)}&t
 function rxLoadFrame(t){const key=rxFrameUrl(t);if(RX.frameKey===key&&RX.frameImg&&RX.frameImg.complete)return Promise.resolve(RX.frameImg);
  return new Promise((ok,bad)=>{const im=new Image();im.onload=()=>{RX.frameImg=im;RX.frameKey=key;ok(im)};im.onerror=()=>bad(new Error('Não consegui carregar um quadro do vídeo original.'));im.src=key})}
 let rxTimer=0;
-function rxAfterDraw(){const c=rxComp();if(!c||!rxReady(c)||!$('rxCanvas'))return;clearTimeout(rxTimer);rxTimer=setTimeout(rxPaint,120)}
+function rxAfterDraw(){const c=rxComp();if(!c||!rxReady(c)||!$('rxCanvas'))return;
+ const key=JSON.stringify(c)+'|'+(RX.t??'');   // o painel é redesenhado a cada ajuste: repinta na hora com o plano em cache (sem piscar) e confirma no servidor
+ if(RX.plan&&RX.planKey===key&&RX.frameImg){rxDraw($('rxCanvas'),RX.plan,RX.frameImg);const w=$('rxWarn');if(w)w.innerHTML=RX.plan.warnings.map(x=>`<div>⚠ ${esc(x)}</div>`).join('');return}
+ if(RX.plan&&RX.frameImg)rxDraw($('rxCanvas'),RX.plan,RX.frameImg);
+ clearTimeout(rxTimer);rxTimer=setTimeout(rxPaint,120)}
 async function rxPaint(){const c=rxComp(),cv=$('rxCanvas');if(!c||!cv||!rxReady(c))return;const id=++RX.busy;
  try{const t=RX.t??Math.min(dur()*.5,Math.max(0,ST.cursor||0));
   const [r,img]=await Promise.all([api('/api/composition/resolve',{id:ST.id,composition:c}),rxLoadFrame(t)]);
-  if(id!==RX.busy||!$('rxCanvas'))return;RX.plan=r.plan;rxDraw(cv,r.plan,img);
+  if(id!==RX.busy||!$('rxCanvas'))return;RX.plan=r.plan;RX.planKey=JSON.stringify(c)+'|'+(RX.t??'');rxDraw($('rxCanvas'),r.plan,img);
   const w=$('rxWarn');if(w)w.innerHTML=r.plan.warnings.map(x=>`<div>⚠ ${esc(x)}</div>`).join('')}
  catch(e){const w=$('rxWarn');if(w)w.textContent=e.message}}
 function rxDraw(cv,plan,img){const g=cv.getContext('2d'),s=cv.width/plan.canvas[0],k=img.naturalWidth/plan.source[0];
@@ -1542,6 +1571,7 @@ document.addEventListener('change',e=>{if(e.target.id==='rxT'&&RX.picker){$('rxL
 /* ───────── ações do painel ───────── */
 function rxSetParam(key,v){mutate(()=>{const c=ST.proj.composition;c.params=c.params||{};c.params[key]=v})}
 $('stRight').addEventListener('click',e=>{const t=e.target;
+ const dl=t.closest('[data-del^="scene:"]');if(dl){e.stopImmediatePropagation();const id=dl.dataset.del.slice(6);mutate(()=>{const c=ST.proj.composition;if(c)c.scenes=(c.scenes||[]).filter(z=>z.id!==id);ST.item=null});return}
  const l=t.closest('[data-rxl]');if(l){const id=l.dataset.rxl;mutate(()=>{const old=ST.proj.composition;ST.proj.composition={version:1,layout:id,regions:old?old.regions:{},params:{}}});const next=rxMissing(rxComp())[0];if(next)setTimeout(()=>rxOpenPicker(next),50);return}
  const a=t.closest('[data-rx]');if(a){const k=a.dataset.rx;
   if(k==='more'){RX.more=!RX.more;drawRight()}
@@ -1551,6 +1581,10 @@ $('stRight').addEventListener('click',e=>{const t=e.target;
    mutate(()=>{const old=ST.proj.composition,keep=p.has_regions&&p.compatible?p.regions:(old?old.regions:{});ST.proj.composition={version:1,layout:p.layout,regions:keep||{},params:Object.assign({},p.params)}});
    if(p.has_regions&&!p.compatible)toast('Este layout foi salvo com regiões de um vídeo de outra proporção: só o modelo e os ajustes foram aplicados. Marque as regiões.',false);
    const next=rxMissing(rxComp())[0];if(next)setTimeout(()=>rxOpenPicker(next),50)}
+  else if(k==='scene-add')rxNewScene(rxPickSceneLayout(),{})
+  else if(k==='scene-paste'&&RX.sceneClip)rxNewScene(RX.sceneClip.layout,RX.sceneClip.params)
+  else if(k.startsWith('scene-copy:')){const o=getItem({kind:'scene',id:k.slice(11)});if(o){RX.sceneClip={layout:o.layout,params:Object.assign({},o.params)};toast('Cena copiada. Selecione outro trecho e use “Colar na seleção”.');drawRight()}}
+  else if(k.startsWith('scene-params:')){const id=k.slice(13);mutate(()=>{const c=ST.proj.composition,o=c.scenes.find(z=>z.id===id);if(o&&o.layout===c.layout)o.params=Object.assign({},c.params||{});else toast('Só vale quando a cena usa o mesmo layout do principal.',true)})}
   else if(k==='preset-save'){const n=$('rxPresetName').value;rxPresetCall({action:'save',name:n,composition:ST.proj.composition,with_regions:$('rxPresetRegions').checked}).then(ok=>{if(ok)toast('Layout salvo.')})}
   else if(k==='preset-rename'){const n=($('rxPresetName')&&$('rxPresetName').value)||'';if(!n)return toast('Digite o novo nome no campo “Nome do layout”.',true);rxPresetCall({action:'rename',preset:RX.presetSel,name:n})}
   else if(k==='preset-dup')rxPresetCall({action:'duplicate',preset:RX.presetSel})
@@ -1562,6 +1596,7 @@ $('stRight').addEventListener('click',e=>{const t=e.target;
  const f=t.closest('[data-rxfit]');if(f){const [pre,fit]=f.dataset.rxfit.split(':');rxSetParam(pre+'_fit',fit)}},true);
 $('stRight').addEventListener('change',e=>{const t=e.target;
  if(t.id==='rxPreset'){RX.presetSel=t.value;e.stopImmediatePropagation();drawRight();return}
+ if(t.dataset.f&&/^composition\.scenes\.\d+\.layout$/.test(t.dataset.f)){e.stopImmediatePropagation();const i=+t.dataset.f.split('.')[2],v=t.value;mutate(()=>{const o=ST.proj.composition.scenes[i];o.layout=v;o.params={}});return}
  if(t.dataset.rxa!==undefined){RX.applyPick[t.dataset.rxa]=t.checked;e.stopImmediatePropagation();return}
  const k=t.dataset.rxf;if(!k)return;e.stopImmediatePropagation();
  let v=t.type==='checkbox'?t.checked:t.value;if(t.dataset.t==='num')v=+v;if(k==='gap'||k==='pip_border')v=Math.round(v);

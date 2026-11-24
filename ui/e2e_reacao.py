@@ -117,6 +117,21 @@ with sync_playwright() as p:
         applied = pg.evaluate("(async()=>{const me=state.candidates.find(x=>x.id===ST.id);const o=state.candidates.filter(x=>x.session===me.session&&x.id!==ST.id&&x.status!=='replaced');const out=[];for(const c of o){const r=await api('/api/project/get',{id:c.id});out.push(!!(r.project&&r.project.composition))}return out})()")
         check('aplicou_aos_outros_cortes', applied and all(applied), applied)
     pg.screenshot(path=f'{OUT}/4b_presets.png')
+    # cenas de reação: criar na seleção, aparecer na timeline, trocar transição
+    pg.evaluate("ST.sel={a:1.0,b:4.0}")
+    pg.click('[data-rx="scene-add"]')
+    wait(pg, "(ST.proj.composition.scenes||[]).length===1")
+    check('cena_criada_na_selecao', pg.evaluate("(()=>{const s=ST.proj.composition.scenes[0];return s.start===1&&s.end===4&&s.layout==='foco_reacao'})()"))
+    check('cena_aparece_na_timeline', pg.evaluate("!!document.querySelector('.blk.scene')&&!!document.querySelector('[data-row=\"scene\"]')"))
+    wait(pg, "ST.item&&ST.item.kind==='scene'")
+    pg.select_option('[data-f="composition.scenes.0.fade"]', '0.3')
+    wait(pg, "ST.proj.composition.scenes[0].fade===.3")
+    check('transicao_suave_definida', True)
+    pg.screenshot(path=f'{OUT}/4c_cenas.png')
+    pg.evaluate("undo()")
+    check('undo_da_transicao', pg.evaluate("ST.proj.composition.scenes[0].fade!==.3"))
+    pg.evaluate("redo()")
+    pg.keyboard.press('Escape')
     # salvar e reabrir
     wait(pg, "!ST.dirty&&!ST.saving", 20000)
     pg.reload(); pg.wait_for_timeout(1500)
@@ -124,6 +139,7 @@ with sync_playwright() as p:
     wait(pg, "typeof ST!=='undefined'&&ST.open&&!!ST.data")
     got = pg.evaluate("ST.proj.composition")
     check('persistiu_apos_reabrir', got and got['layout'] == 'cam_ampliada' and got['params']['split'] == .55 and 'conteudo' in got['regions'], got)
+    check('cenas_persistiram', got and len(got.get('scenes', [])) == 1 and got['scenes'][0]['fade'] == .3, got)
     # prévia em vídeo (rascunho) com a composição
     pg.click('[data-sec="frame"]') if not pg.evaluate("ST.secs.has('frame')") else None
     wait(pg, "ST.data.preview&&ST.data.preview.available&&ST.data.preview.ready", 120000)
