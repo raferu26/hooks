@@ -386,6 +386,16 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
 .steps li.done{color:var(--muted)}
 .steps li.now{color:var(--ink);font-weight:650}
 .steps li.now b{background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:1px 9px;font-weight:650}
+/* Busca de ações (Ctrl+K) */
+dialog.cmd{width:min(560px,94vw);margin-top:12vh;overflow:hidden}
+.cmd input{width:100%;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:14px 18px;font-size:var(--fs-lg);outline:none}
+.cmd ul{list-style:none;margin:0;padding:6px;max-height:50vh;overflow:auto}
+.cmd li{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:var(--fs-md)}
+.cmd li .lbl{flex:1}.cmd li small{color:var(--muted);font-size:var(--fs-xs)}
+.cmd li kbd{flex:none;width:auto;min-width:0;display:inline-block;font-size:var(--fs-xs);padding:1px 7px;border:1px solid var(--line2);border-radius:5px;color:var(--muted)}
+.cmd li.on{background:var(--hover);outline:1px solid var(--line2)}
+.cmd .empty{padding:14px 18px;color:var(--muted)}
+.cmd-foot{padding:8px 16px;border-top:1px solid var(--line)}
 
 </style></head>
 <body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -491,7 +501,7 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
  <div class="sbar">
   <button id="stBack" class="quiet" title="Voltar à biblioteca (salva antes)">← Voltar</button><span class="name" id="stName"></span><button type="button" class="chip" id="stState"></button><span class="chip" id="stPrev"></span><span class="small muted" id="stFlow" aria-live="polite"></span>
   <span class="grow"><ol class="steps" id="stSteps" aria-label="Etapas do corte"></ol></span>
-  <button id="stUndo" class="quiet small" title="Desfazer (Ctrl+Z)" aria-label="Desfazer">↶</button><button id="stRedo" class="quiet small" title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer">↷</button><button id="stKeys" class="quiet small" title="Atalhos do teclado (?)" aria-label="Atalhos do teclado">?</button>
+  <button id="stUndo" class="quiet small" title="Desfazer (Ctrl+Z)" aria-label="Desfazer">↶</button><button id="stRedo" class="quiet small" title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer">↷</button><button id="stCmd" class="quiet small" title="Buscar ação (Ctrl+K)" aria-label="Buscar ação">⌕</button><button id="stKeys" class="quiet small" title="Atalhos do teclado (?)" aria-label="Atalhos do teclado">?</button>
   <button id="stRefresh" title="Gera a prévia com as alterações (P)">Atualizar prévia</button>
   <button id="stReject" class="danger" title="Rejeitar (R)">Rejeitar</button>
   <span class="export"><select id="stQuality" aria-label="Qualidade da exportação" title="Qualidade do arquivo final"></select><button id="stApprove" class="primary" title="Aprova e coloca na fila de exportação (Ctrl+Enter duas vezes)">Exportar</button></span>
@@ -508,6 +518,7 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
   <div class="tl-wrap" id="tlWrap"><div class="tl-heads" id="tlHeads"></div><div class="tl-scroll" id="tlScroll"><div class="tl" id="tl"></div></div></div>
  </div>
 </div>
+<dialog id="cmdDialog" class="cmd" aria-label="Buscar ação"><input id="cmdInput" type="text" autocomplete="off" spellcheck="false" placeholder="Buscar ação… (ex.: cortar, zoom, exportar)" aria-label="Buscar ação" role="combobox" aria-expanded="true" aria-controls="cmdList"><ul id="cmdList" role="listbox"></ul><div class="cmd-foot muted small">↑ ↓ navegam · Enter executa · Esc fecha</div></dialog>
 <dialog id="keysDialog"><div class="dhead"><h2>Atalhos do Estúdio</h2><button class="quiet" data-close aria-label="Fechar">✕</button></div><div class="body list" id="keysList"></div></dialog>
 
 <dialog id="streamerDialog"><div class="dhead"><div><h2>Adicionar streamer</h2><p class="muted">Esse nome também será o nome da pasta.</p></div><button class="quiet" data-close aria-label="Fechar">✕</button></div><form id="streamerForm"><div><label for="streamerName">Nome</label><input id="streamerName" placeholder="Ex.: CORINGA" maxlength="60" required></div><button class="primary">Criar pasta e perfil</button></form></dialog>
@@ -1267,7 +1278,45 @@ $('auditOk').onchange=()=>$('auditGo').disabled=!$('auditOk').checked;
 $('auditGo').onclick=async()=>{$('confirmDialog').close();try{await doApprove(true)}catch(e){toast(e.message,true)}};
 async function doApprove(ok){const q=$('stQuality').value;await api('/api/review',{id:ST.id,version:ST.data.version,start:ST.start,end:ST.end,action:'approve',editorial_confirmed:ok,edit_overrides:ST.overrides,quality_mode:q});toast('Exportação na fila ('+($('stQuality').selectedOptions[0]?.textContent||q)+'). Acompanhe em Cortes → Na fila.');ST.dirty=false;ST.unlearned=false;await nextOrClose()}
 let approveArmed=0;
-const SHORTCUTS=[['Espaço','reproduzir / pausar'],['← →','voltar / avançar 1 s (Shift: 5 s)'],['C','cortar o trecho selecionado'],['Delete','remover o item selecionado'],['Esc','limpar seleção'],['Ctrl+Z / Ctrl+Shift+Z','desfazer / refazer'],['Ctrl+S','salvar agora (salva sozinho também)'],['P','atualizar a prévia'],['F','recolher/mostrar a linha do tempo (prévia maior)'],['[ ]','corte anterior / próximo'],['R','rejeitar'],['Ctrl+Enter (2×)','exportar'],['+ −','zoom da linha do tempo'],['Alt (ao arrastar)','desliga o alinhamento magnético'],['?','mostrar estes atalhos']];
+const SHORTCUTS=[['Espaço','reproduzir / pausar'],['← →','voltar / avançar 1 s (Shift: 5 s)'],['C','cortar o trecho selecionado'],['Delete','remover o item selecionado'],['Esc','limpar seleção'],['Ctrl+Z / Ctrl+Shift+Z','desfazer / refazer'],['Ctrl+S','salvar agora (salva sozinho também)'],['P','atualizar a prévia'],['F','recolher/mostrar a linha do tempo (prévia maior)'],['[ ]','corte anterior / próximo'],['R','rejeitar'],['Ctrl+Enter (2×)','exportar'],['+ −','zoom da linha do tempo'],['Alt (ao arrastar)','desliga o alinhamento magnético'],['Ctrl+K','buscar e executar qualquer ação'],['?','mostrar estes atalhos']];
+/* ── Busca de ações (Ctrl+K): lista só o que se pode fazer agora; acentos e maiúsculas não importam ── */
+const norm=x=>String(x).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function commands(){const P=ST.proj,sel=!!ST.sel,d=ST.data,list=[
+ ['Cortar o trecho selecionado','C','remover apagar tirar',sel,()=>selectionOp('cut')],
+ ['Dar zoom no trecho selecionado','','aproximar ampliar',sel,()=>selectionOp('zoom')],
+ ['Adicionar título no trecho selecionado','','texto na tela',sel,()=>selectionOp('title')],
+ ['Limpar seleção','Esc','desmarcar',sel||!!ST.item,()=>{ST.sel=null;ST.anchor=null;ST.item=null;drawLeft();drawTimeline();drawRight()}],
+ ['Remover o item selecionado','Delete','apagar excluir',!!ST.item,()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'Delete',bubbles:true}))],
+ ['Desfazer','Ctrl+Z','voltar',ST.undo.length>0,undo],['Refazer','Ctrl+Shift+Z','',ST.redo.length>0,redo],
+ ['Salvar agora','Ctrl+S','gravar',true,()=>saveNow()],
+ ['Atualizar a prévia','P','renderizar gerar',!ST.busy,()=>refreshPreview()],
+ ['Reproduzir / pausar','Espaço','play tocar',true,()=>$('stPlay').click()],
+ ['Corte anterior','[','voltar clipe',true,()=>goClip(-1)],['Próximo corte','] ','avancar clipe',true,()=>goClip(1)],
+ ['Recolher / mostrar a linha do tempo (prévia maior)','F','ampliar previa foco',true,toggleFold],
+ ['Aproximar a linha do tempo','+','zoom timeline',true,()=>$('tlIn').click()],['Afastar a linha do tempo','−','zoom timeline',true,()=>$('tlOut').click()],
+ ['Mostrar todas as pistas','','pistas vazias',true,()=>$('tlAll').click()],
+ ['Mostrar / esconder zonas seguras','','margens tiktok',true,()=>$('safeToggle').click()],
+ ['Ligar / desligar legendas ao vivo','','previa legenda',true,()=>$('liveToggle').click()],
+ ['Ligar / desligar prévia automática','','autoprevia',true,()=>$('stAuto').click()],
+ ['Rejeitar este corte','R','descartar',true,()=>$('stReject').click()],
+ ['Ir para Exportar (confirme com Enter no botão)','Ctrl+Enter ×2','aprovar enviar',!ST.busy,()=>{$('stApprove').focus();toast('Exportar: pressione Enter no botão destacado para confirmar.')}],
+ ['Mostrar os atalhos do teclado','?','ajuda',true,showKeys],
+ ['Voltar à biblioteca','','sair fechar',true,()=>leave()]];
+ for(const [id,label] of SECTIONS)if(id!=='pub'||d.status==='done')list.push(['Abrir seção: '+label,'','inspetor painel',true,()=>{ST.secs.add(id);drawRight();const e=document.querySelector('[data-sec="'+id+'"]');if(e)e.scrollIntoView({block:'nearest'})}]);
+ return list.filter(x=>x[3]).map(([label,key,words,,run])=>({label,key:key.trim(),words,run,hay:norm(label+' '+words+' '+key)}))}
+const CMDK={items:[],shown:[],at:0};
+function cmdRender(){const q=norm($('cmdInput').value).split(/\s+/).filter(Boolean);
+ CMDK.shown=CMDK.items.filter(c=>q.every(t=>c.hay.includes(t))).sort((a,b)=>(norm(b.label).startsWith(q[0]||'~')?1:0)-(norm(a.label).startsWith(q[0]||'~')?1:0));
+ CMDK.at=Math.min(CMDK.at,Math.max(0,CMDK.shown.length-1));
+ $('cmdList').innerHTML=CMDK.shown.length?CMDK.shown.map((c,i)=>`<li role="option" id="cmd${i}" data-i="${i}" class="${i===CMDK.at?'on':''}" aria-selected="${i===CMDK.at}"><span class="lbl">${esc(c.label)}</span>${c.key?`<kbd>${esc(c.key)}</kbd>`:''}</li>`).join(''):'<li class="empty" role="option" aria-disabled="true">Nenhuma ação encontrada.</li>';
+ $('cmdInput').setAttribute('aria-activedescendant',CMDK.shown.length?'cmd'+CMDK.at:'')}
+function cmdOpen(){const d=$('cmdDialog');if(d.open)return;CMDK.items=commands();CMDK.at=0;$('cmdInput').value='';cmdRender();d.showModal();$('cmdInput').focus()}
+function cmdRun(i){const c=CMDK.shown[i];if(!c)return;$('cmdDialog').close();setTimeout(()=>{try{c.run()}catch(e){toast(e.message,true)}},0)}
+$('cmdInput').addEventListener('input',()=>{CMDK.at=0;cmdRender()});
+$('cmdInput').addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const n=CMDK.shown.length;if(n){CMDK.at=(CMDK.at+(e.key==='ArrowDown'?1:n-1))%n;cmdRender();const el=$('cmd'+CMDK.at);if(el)el.scrollIntoView({block:'nearest'})}}else if(e.key==='Enter'){e.preventDefault();cmdRun(CMDK.at)}});
+$('cmdList').addEventListener('click',e=>{const li=e.target.closest('li[data-i]');if(li)cmdRun(+li.dataset.i)});
+$('stCmd').onclick=cmdOpen;
+document.addEventListener('keydown',e=>{if(ST.open&&(e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&e.key.toLowerCase()==='k'&&!document.querySelector('dialog[open]')){e.preventDefault();cmdOpen()}});
 function showKeys(){const d=$('keysDialog');$('keysList').innerHTML=SHORTCUTS.map(([k,v])=>`<div class="row"><kbd>${k}</kbd><span class="grow">${v}</span></div>`).join('');d.showModal()}
 document.addEventListener('keydown',e=>{if(!ST.open||document.querySelector('dialog[open]'))return;const tag=(e.target.tagName||'');const typing=['INPUT','TEXTAREA','SELECT'].includes(tag);const mod=e.ctrlKey||e.metaKey;
  if(mod&&e.key.toLowerCase()==='z'){if(typing)return;e.preventDefault();e.shiftKey?redo():undo();return}

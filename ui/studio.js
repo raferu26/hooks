@@ -436,7 +436,45 @@ $('auditOk').onchange=()=>$('auditGo').disabled=!$('auditOk').checked;
 $('auditGo').onclick=async()=>{$('confirmDialog').close();try{await doApprove(true)}catch(e){toast(e.message,true)}};
 async function doApprove(ok){const q=$('stQuality').value;await api('/api/review',{id:ST.id,version:ST.data.version,start:ST.start,end:ST.end,action:'approve',editorial_confirmed:ok,edit_overrides:ST.overrides,quality_mode:q});toast('Exportação na fila ('+($('stQuality').selectedOptions[0]?.textContent||q)+'). Acompanhe em Cortes → Na fila.');ST.dirty=false;ST.unlearned=false;await nextOrClose()}
 let approveArmed=0;
-const SHORTCUTS=[['Espaço','reproduzir / pausar'],['← →','voltar / avançar 1 s (Shift: 5 s)'],['C','cortar o trecho selecionado'],['Delete','remover o item selecionado'],['Esc','limpar seleção'],['Ctrl+Z / Ctrl+Shift+Z','desfazer / refazer'],['Ctrl+S','salvar agora (salva sozinho também)'],['P','atualizar a prévia'],['F','recolher/mostrar a linha do tempo (prévia maior)'],['[ ]','corte anterior / próximo'],['R','rejeitar'],['Ctrl+Enter (2×)','exportar'],['+ −','zoom da linha do tempo'],['Alt (ao arrastar)','desliga o alinhamento magnético'],['?','mostrar estes atalhos']];
+const SHORTCUTS=[['Espaço','reproduzir / pausar'],['← →','voltar / avançar 1 s (Shift: 5 s)'],['C','cortar o trecho selecionado'],['Delete','remover o item selecionado'],['Esc','limpar seleção'],['Ctrl+Z / Ctrl+Shift+Z','desfazer / refazer'],['Ctrl+S','salvar agora (salva sozinho também)'],['P','atualizar a prévia'],['F','recolher/mostrar a linha do tempo (prévia maior)'],['[ ]','corte anterior / próximo'],['R','rejeitar'],['Ctrl+Enter (2×)','exportar'],['+ −','zoom da linha do tempo'],['Alt (ao arrastar)','desliga o alinhamento magnético'],['Ctrl+K','buscar e executar qualquer ação'],['?','mostrar estes atalhos']];
+/* ── Busca de ações (Ctrl+K): lista só o que se pode fazer agora; acentos e maiúsculas não importam ── */
+const norm=x=>String(x).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function commands(){const P=ST.proj,sel=!!ST.sel,d=ST.data,list=[
+ ['Cortar o trecho selecionado','C','remover apagar tirar',sel,()=>selectionOp('cut')],
+ ['Dar zoom no trecho selecionado','','aproximar ampliar',sel,()=>selectionOp('zoom')],
+ ['Adicionar título no trecho selecionado','','texto na tela',sel,()=>selectionOp('title')],
+ ['Limpar seleção','Esc','desmarcar',sel||!!ST.item,()=>{ST.sel=null;ST.anchor=null;ST.item=null;drawLeft();drawTimeline();drawRight()}],
+ ['Remover o item selecionado','Delete','apagar excluir',!!ST.item,()=>document.dispatchEvent(new KeyboardEvent('keydown',{key:'Delete',bubbles:true}))],
+ ['Desfazer','Ctrl+Z','voltar',ST.undo.length>0,undo],['Refazer','Ctrl+Shift+Z','',ST.redo.length>0,redo],
+ ['Salvar agora','Ctrl+S','gravar',true,()=>saveNow()],
+ ['Atualizar a prévia','P','renderizar gerar',!ST.busy,()=>refreshPreview()],
+ ['Reproduzir / pausar','Espaço','play tocar',true,()=>$('stPlay').click()],
+ ['Corte anterior','[','voltar clipe',true,()=>goClip(-1)],['Próximo corte','] ','avancar clipe',true,()=>goClip(1)],
+ ['Recolher / mostrar a linha do tempo (prévia maior)','F','ampliar previa foco',true,toggleFold],
+ ['Aproximar a linha do tempo','+','zoom timeline',true,()=>$('tlIn').click()],['Afastar a linha do tempo','−','zoom timeline',true,()=>$('tlOut').click()],
+ ['Mostrar todas as pistas','','pistas vazias',true,()=>$('tlAll').click()],
+ ['Mostrar / esconder zonas seguras','','margens tiktok',true,()=>$('safeToggle').click()],
+ ['Ligar / desligar legendas ao vivo','','previa legenda',true,()=>$('liveToggle').click()],
+ ['Ligar / desligar prévia automática','','autoprevia',true,()=>$('stAuto').click()],
+ ['Rejeitar este corte','R','descartar',true,()=>$('stReject').click()],
+ ['Ir para Exportar (confirme com Enter no botão)','Ctrl+Enter ×2','aprovar enviar',!ST.busy,()=>{$('stApprove').focus();toast('Exportar: pressione Enter no botão destacado para confirmar.')}],
+ ['Mostrar os atalhos do teclado','?','ajuda',true,showKeys],
+ ['Voltar à biblioteca','','sair fechar',true,()=>leave()]];
+ for(const [id,label] of SECTIONS)if(id!=='pub'||d.status==='done')list.push(['Abrir seção: '+label,'','inspetor painel',true,()=>{ST.secs.add(id);drawRight();const e=document.querySelector('[data-sec="'+id+'"]');if(e)e.scrollIntoView({block:'nearest'})}]);
+ return list.filter(x=>x[3]).map(([label,key,words,,run])=>({label,key:key.trim(),words,run,hay:norm(label+' '+words+' '+key)}))}
+const CMDK={items:[],shown:[],at:0};
+function cmdRender(){const q=norm($('cmdInput').value).split(/\s+/).filter(Boolean);
+ CMDK.shown=CMDK.items.filter(c=>q.every(t=>c.hay.includes(t))).sort((a,b)=>(norm(b.label).startsWith(q[0]||'~')?1:0)-(norm(a.label).startsWith(q[0]||'~')?1:0));
+ CMDK.at=Math.min(CMDK.at,Math.max(0,CMDK.shown.length-1));
+ $('cmdList').innerHTML=CMDK.shown.length?CMDK.shown.map((c,i)=>`<li role="option" id="cmd${i}" data-i="${i}" class="${i===CMDK.at?'on':''}" aria-selected="${i===CMDK.at}"><span class="lbl">${esc(c.label)}</span>${c.key?`<kbd>${esc(c.key)}</kbd>`:''}</li>`).join(''):'<li class="empty" role="option" aria-disabled="true">Nenhuma ação encontrada.</li>';
+ $('cmdInput').setAttribute('aria-activedescendant',CMDK.shown.length?'cmd'+CMDK.at:'')}
+function cmdOpen(){const d=$('cmdDialog');if(d.open)return;CMDK.items=commands();CMDK.at=0;$('cmdInput').value='';cmdRender();d.showModal();$('cmdInput').focus()}
+function cmdRun(i){const c=CMDK.shown[i];if(!c)return;$('cmdDialog').close();setTimeout(()=>{try{c.run()}catch(e){toast(e.message,true)}},0)}
+$('cmdInput').addEventListener('input',()=>{CMDK.at=0;cmdRender()});
+$('cmdInput').addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();const n=CMDK.shown.length;if(n){CMDK.at=(CMDK.at+(e.key==='ArrowDown'?1:n-1))%n;cmdRender();const el=$('cmd'+CMDK.at);if(el)el.scrollIntoView({block:'nearest'})}}else if(e.key==='Enter'){e.preventDefault();cmdRun(CMDK.at)}});
+$('cmdList').addEventListener('click',e=>{const li=e.target.closest('li[data-i]');if(li)cmdRun(+li.dataset.i)});
+$('stCmd').onclick=cmdOpen;
+document.addEventListener('keydown',e=>{if(ST.open&&(e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&e.key.toLowerCase()==='k'&&!document.querySelector('dialog[open]')){e.preventDefault();cmdOpen()}});
 function showKeys(){const d=$('keysDialog');$('keysList').innerHTML=SHORTCUTS.map(([k,v])=>`<div class="row"><kbd>${k}</kbd><span class="grow">${v}</span></div>`).join('');d.showModal()}
 document.addEventListener('keydown',e=>{if(!ST.open||document.querySelector('dialog[open]'))return;const tag=(e.target.tagName||'');const typing=['INPUT','TEXTAREA','SELECT'].includes(tag);const mod=e.ctrlKey||e.metaKey;
  if(mod&&e.key.toLowerCase()==='z'){if(typing)return;e.preventDefault();e.shiftKey?redo():undo();return}
