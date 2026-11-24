@@ -36,5 +36,14 @@ with sync_playwright() as p:
     for k in ('mutate_ms', 'undo_ms'):
         v = r.pop(k); r[k.replace('_ms', '')] = dict(p50=round(statistics.median(v), 2), p95=pct(v, .95), max=round(max(v), 2))
     out.update(r)
+    # arrasto: 60 pointermove sobre um zoom (eventos sintéticos no navegador; mede só o trabalho do manipulador + redesenho)
+    d = pg.evaluate("""()=>{ST.proj.zooms=[{id:'zb',start:2,end:4,zoom:1.12,curve:'smooth'}];drawAll();
+      const el=document.querySelector('.blk[data-kind=zoom][data-key=zb]'),r=el.getBoundingClientRect();const cx=r.left+r.width/2,cy=r.top+r.height/2;
+      let draws=0;const f=window.drawTimeline;window.drawTimeline=function(){draws++;return f.apply(this,arguments)};
+      const ev=(t,x)=>new PointerEvent(t,{bubbles:true,cancelable:true,clientX:x,clientY:cy,pointerId:1,buttons:1});
+      el.dispatchEvent(ev('pointerdown',cx));const t=[];for(let i=1;i<=60;i++){const s0=performance.now();document.dispatchEvent(ev('pointermove',cx+i*2));t.push(performance.now()-s0)}
+      const during=draws;document.dispatchEvent(ev('pointerup',cx+120));window.drawTimeline=f;
+      t.sort((a,b)=>a-b);return {pointermove_p50_ms:+t[30].toFixed(2),pointermove_p95_ms:+t[57].toFixed(2),pointermove_max_ms:+t[59].toFixed(2),redesenhos_durante_arrasto:during,redesenhos_total:draws,final_start:ST.proj.zooms[0]&&ST.proj.zooms[0].start}}""")
+    out['arrasto']=d
     print(json.dumps(out, ensure_ascii=False, indent=1))
     b.close()

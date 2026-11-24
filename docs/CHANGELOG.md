@@ -62,3 +62,10 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 - **ALTERAÇÃO** (`ui/studio.js`, `body.html`, `style.css`): indicador de 4 etapas **derivado do estado real**: *Exportar/Exportando…/Exportado* quando o corte foi aprovado; *Editar* com alterações não salvas, salvando ou prévia desatualizada; *Conferir* com tudo salvo e prévia atual. Dicas ao passar o mouse; `aria-current="step"`; oculto abaixo de 1180 px (como "1 de N").
 - **TESTE:** e2e `etapa_editar_ao_alterar` e `etapa_conferir_com_previa_pronta`; e2e completo sem falhas; barra continua em 1 linha (47,8 px) a 1440/1280/1024; `test_interface`, `test_design_tokens`, `test_http` OK.
 - **Não feito:** as etapas são informativas (não clicáveis); o fluxo "Importar" fora do Estúdio (tela Adicionar) não foi redesenhado; sem teste com pessoas.
+
+## [Arrasto sem redesenho total] — 24/11/2026 (N5/KI-03, A03)
+- **ANTES (`validacao/bench_ui.py`, 60 `pointermove` sobre um zoom):** **60 redesenhos** da timeline; manipulador p50/p95 = **4,2/8,2 ms** (200 cortes) e **10/18,2 ms** (500 cortes). Perfil de `mutate()` (500 cortes): `drawTimeline` 11,4 ms de 16,1 ms; `snap` (JSON) 0,09 ms — o snapshot de desfazer **não** é o gargalo.
+- **ALTERAÇÃO** (`ui/studio.js`): `dragPaint` move só o bloco arrastado (`left/width`) durante o arrasto; redesenho completo apenas ao soltar. SFX/congelar mantêm o caminho antigo.
+- **TESTE:** e2e `snap_*` (resultado final idêntico: 3,29 s/3,3 s) + e2e completo sem falhas.
+- **RESULTADO:** redesenhos durante o arrasto **60 → 0**; p50/p95 **0,1/0,5 ms** (200) e **0,2/0,8 ms** (500) — de ~18 ms p95 para <1 ms (meta de 16 ms por quadro atendida também com 500 itens). Resultados em `validacao/bench_ui_depois_n5.json`.
+- **Não feito:** `mutate()` discreto ainda redesenha tudo (8 ms/200 e 16 ms/500, `drawLeft` 2–3 ms evitável); clipe de 90 s (V09) continua sem medição.
