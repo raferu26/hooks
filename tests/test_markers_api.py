@@ -8,7 +8,7 @@ from unittest import mock
 import numpy as np
 
 from liveclips.app import App
-from tests.helpers import setup_session
+from tests.helpers import candidate, setup_session
 
 
 class MarkersApi(unittest.TestCase):
@@ -68,6 +68,32 @@ class MarkersApi(unittest.TestCase):
             self.call('/api/session/subtitles/paste', text='  ', start=10, end=22)
         with self.assertRaises(ValueError):
             self.call('/api/session/subtitles/paste', text='x', start=10, end=2000)
+
+    def _speech_env(self):
+        from liveclips import technical
+        rng = np.random.default_rng(2); x = rng.standard_normal(technical.RATE * 20).astype(np.float32) * 1e-3
+        for a, b in ((1, 6), (8, 14), (15, 19)):
+            x[a * technical.RATE:b * technical.RATE] += rng.standard_normal((b - a) * technical.RATE).astype(np.float32) * .1
+        return technical.envelope_of(x)
+
+    def test_captions_from_text_returns_studio_lines_without_writing_anything(self):
+        item, _ = candidate(self.app.store, self.sid, 10, 30)
+        with mock.patch('liveclips.technical.envelope', return_value=self._speech_env()):
+            r = self.app.action('/api/captions/from-text', dict(id=item['id'], text='primeira frase colada\nsegunda frase colada\nterceira frase colada'))
+        self.assertEqual(r['timing'], 'estimado')
+        self.assertEqual(len(r['lines']), 3)
+        self.assertTrue(all(0 <= l['start'] < l['end'] <= r['duration'] + .5 for l in r['lines']))       # tempos relativos ao corte
+        self.assertTrue(all(l['words'] for l in r['lines']))
+        self.assertEqual(self.app.store.candidate(item['id'])['version'], item['version'])               # nada foi gravado
+        with self.assertRaises(ValueError):
+            self.app.action('/api/captions/from-text', dict(id=item['id'], text='   '))
+
+    def test_captions_from_text_with_taps_uses_them(self):
+        item, _ = candidate(self.app.store, self.sid, 10, 30)
+        with mock.patch('liveclips.technical.envelope', return_value=self._speech_env()):
+            r = self.app.action('/api/captions/from-text', dict(id=item['id'], text='um dois três\nquatro cinco seis', taps=[2.0, 9.0]))
+        self.assertEqual(r['timing'], 'toques')
+        self.assertEqual([round(l['start'], 1) for l in r['lines']], [2.0, 9.0])
 
     def test_clear_markers(self):
         self.call('/api/session/marker', time=30)
