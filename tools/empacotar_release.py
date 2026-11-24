@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 INCLUDE_DIRS = ('liveclips/', 'hooks_cloud/', 'assets/')
 INCLUDE_FILES = ('requirements.txt', 'README.md', 'THIRD_PARTY_NOTICES.md', 'cloud_config.exemplo.json', 'DEPLOY_SERVIDOR.md', 'DPA_RASCUNHO.md',
-                 'docs/WINDOWS_BETA.md', 'docs/CHANGELOG.md')
+                 'docs/WINDOWS_BETA.md', 'docs/CHANGELOG.md', 'docs/COMPOSICAO_REACAO.md')
 REQUIRED = ('INSTALAR.bat', 'ABRIR_LIVECLIPS.bat', 'ATUALIZAR.bat', 'CRIAR_ATALHO.bat', 'CRIAR_ATALHO.ps1', 'GERAR_DIAGNOSTICO.bat', 'RESTAURAR_BACKUP.bat',
             'requirements.txt', 'liveclips/__main__.py', 'liveclips/static/index.html')
 FORBIDDEN = re.compile(r'(^|/)(\.git|\.venv|venv|__pycache__|tests|validacao|ui|docs/handoff)(/|$)|\.(mp4|ts|mkv|mov|wav|mp3|sqlite3?|db|pem|key|p12|env)$|(^|/)\.env', re.I)
@@ -82,7 +82,7 @@ def verify(zpath):
 
 
 AI_WHEELS = re.compile(r'^(mediapipe|faster[-_]whisper|ctranslate2|onnxruntime|jax|jaxlib|ml[-_]dtypes|matplotlib|scipy|tokenizers|huggingface[-_]hub|hf[-_]xet|sentencepiece|torch|tensorflow|av)-', re.I)
-TEST_DOCS = ('LEIA-ME_TESTE_WINDOWS.txt', 'CHECKLIST_W01_W10.md', 'REGISTRO_DE_PROBLEMAS.md', 'LIMITACOES.md')
+TEST_DOCS = ('LEIA-ME_TESTE_WINDOWS.txt', 'CHECKLIST_W01_W10.md', 'REGISTRO_DE_PROBLEMAS.md', 'LIMITACOES.md', 'ROTEIRO_LAYOUT_REACAO.md')
 TEST_REQUIRED = ('INSTALAR_TESTE.bat', 'AUTOTESTE.bat', 'MEDIR_DESEMPENHO.bat', 'COLETAR_RELATORIO.bat', 'VERIFICAR_PACOTE.bat', 'requirements-sem-ia.txt',
                  'LEIA-ME_TESTE_WINDOWS.txt', 'CHECKLIST_W01_W10.md', 'LIMITACOES.md', 'BUILD_INFO.json', 'MANIFESTO.sha256')
 

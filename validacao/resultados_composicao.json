@@ -1,0 +1,97 @@
+{
+  "seconds_of_media": 20,
+  "repetitions": 3,
+  "cpu_count": 4,
+  "runs": {
+    "final/referencia": {
+      "median_seconds": 18.27,
+      "max_rss_mb": 734,
+      "size_mb": 7.1,
+      "all_seconds": [
+        18.27,
+        18.15,
+        19.2
+      ],
+      "errors": []
+    },
+    "final/composicao": {
+      "median_seconds": 12.27,
+      "max_rss_mb": 725,
+      "size_mb": 4.19,
+      "all_seconds": [
+        12.27,
+        11.81,
+        12.64
+      ],
+      "errors": []
+    },
+    "final/composicao_2_cenas": {
+      "median_seconds": 17.03,
+      "max_rss_mb": 979,
+      "size_mb": 3.89,
+      "all_seconds": [
+        17.12,
+        16.67,
+        17.03
+      ],
+      "errors": []
+    },
+    "final/composicao_blur_cinema": {
+      "median_seconds": 12.35,
+      "max_rss_mb": 723,
+      "size_mb": 4.12,
+      "all_seconds": [
+        12.59,
+        11.67,
+        12.35
+      ],
+      "errors": []
+    },
+    "draft/referencia": {
+      "median_seconds": 6.28,
+      "max_rss_mb": 263,
+      "size_mb": 1.98,
+      "all_seconds": [
+        6.34,
+        6.28,
+        6.25
+      ],
+      "errors": []
+    },
+    "draft/composicao": {
+      "median_seconds": 6.89,
+      "max_rss_mb": 280,
+      "size_mb": 2.11,
+      "all_seconds": [
+        6.17,
+        6.89,
+        7.38
+      ],
+      "errors": []
+    },
+    "draft/composicao_2_cenas": {
+      "median_seconds": 12.08,
+      "max_rss_mb": 517,
+      "size_mb": 1.96,
+      "all_seconds": [
+        12.08,
+        12.04,
+        12.08
+      ],
+      "errors": []
+    },
+    "draft/composicao_blur_cinema": {
+      "median_seconds": 7.67,
+      "max_rss_mb": 278,
+      "size_mb": 2.24,
+      "all_seconds": [
+        8.12,
+        7.67,
+        7.46
+      ],
+      "errors": []
+    }
+  },
+  "resolve_ms": 0.015,
+  "graph_build_ms": 0.181
+}

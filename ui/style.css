@@ -409,3 +409,23 @@ dialog.cmd{width:min(560px,94vw);margin-top:12vh;overflow:hidden}
 .tapbar{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;z-index:30;background:var(--panel);border:1px solid var(--accent);border-radius:12px;padding:10px 14px;display:grid;gap:6px;min-width:300px;max-width:560px;box-shadow:0 10px 40px #000c}
 .tapbar .ph{font-size:var(--fs-lg);font-weight:650}
 .blk.speech .h{width:6px}
+
+/* Layout de reação: seletor de regiões e prévia imediata */
+.rx-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.rx-prev{display:flex;gap:10px;align-items:flex-start}
+.rx-prev canvas{width:108px;height:192px;border:1px solid var(--line);border-radius:6px;background:#000;flex:none}
+.seg{display:flex;gap:4px;flex-wrap:wrap}.seg button[aria-pressed=true]{border-color:var(--aqua);box-shadow:0 0 0 1px var(--aqua)}
+.rx-modal{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px}
+.rx-card{background:var(--panel,#14141a);border:1px solid var(--line);border-radius:10px;padding:14px;width:min(920px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.rx-stage{position:relative;align-self:center;max-width:100%;touch-action:none;cursor:crosshair;user-select:none;line-height:0}
+.rx-stage img{display:block;max-width:100%;max-height:56vh;width:auto;height:auto;border-radius:4px}
+.rx-stage #rxLayer{position:absolute;inset:0}
+.rx-rect{position:absolute;border:2px solid;box-sizing:border-box;background:rgba(255,255,255,.06)}
+.rx-rect.other{border-style:dashed;pointer-events:none;opacity:.8}
+.rx-rect.cur{cursor:move;background:rgba(255,255,255,.1)}
+.rx-rect span{position:absolute;left:-2px;top:-20px;font:600 11px/16px var(--font,sans-serif);color:#001;padding:0 6px;border-radius:3px 3px 0 0;white-space:nowrap}
+.rx-h{position:absolute;width:14px;height:14px;background:#fff;border:2px solid #111;border-radius:3px;box-sizing:border-box}
+.rx-h.nw{left:-8px;top:-8px;cursor:nwse-resize}.rx-h.ne{right:-8px;top:-8px;cursor:nesw-resize}
+.rx-h.sw{left:-8px;bottom:-8px;cursor:nesw-resize}.rx-h.se{right:-8px;bottom:-8px;cursor:nwse-resize}
+.rx-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:var(--fs-sm);background:rgba(0,0,0,.4);line-height:1.3;text-align:center;padding:12px}
+.blk.scene{background:#5b3a8a;color:#efe3ff}

@@ -26,7 +26,7 @@ HEX = re.compile(r'^#?([0-9a-fA-F]{6})$')
 
 def empty():
     return dict(version=1, style=None, cuts=[], zooms=[], titles=[], music=None, grade=None, teaser=None,
-                voice=dict(clean=False, mode='light'), sfx=[], layout=None, speeds=[], freezes=[], overlays=[], replays=[], formats=[],
+                voice=dict(clean=False, mode='light'), sfx=[], layout=None, composition=None, speeds=[], freezes=[], overlays=[], replays=[], formats=[],
                 captions=dict(enabled=True, style=None, size=None, margin=None, color=None, lines=None))
 
 
@@ -209,6 +209,10 @@ def clean(raw, duration, music_exists=None, image_exists=None):
         result['layout'] = dict(mode=layout['mode'], pip=corner,
                                 focus=round(_number(layout.get('focus'), 0, 1, 'Foco do quadro', .5), 3),
                                 pip_size=round(_number(layout.get('pip_size'), .2, .5, 'Tamanho da câmera pequena', .36), 3))
+    from . import composition as composition_module
+    reaction = composition_module.clean(raw.get('composition'), duration)
+    if reaction:
+        result['composition'] = reaction
     speeds = raw.get('speeds') or []
     if not isinstance(speeds, list) or len(speeds) > LIMITS['speeds']:
         raise ValueError(f'Use no máximo {LIMITS["speeds"]} trechos com velocidade alterada.')
@@ -372,6 +376,10 @@ def rebase(project, delta, duration):
     result['replays'] = replays
     result['freezes'] = [dict(f, at=round(float(f['at']) + delta, 3)) for f in project.get('freezes') or []
                          if 0 <= float(f['at']) + delta <= duration]
+    comp = project.get('composition')
+    if isinstance(comp, dict) and comp.get('scenes'):
+        scenes = [move(item, .4) for item in comp['scenes']]
+        result['composition'] = dict(comp, scenes=[item for item in scenes if item])   # cenas seguem o conteúdo, não o relógio absoluto
     teaser = project.get('teaser')
     result['teaser'] = move(teaser, .8) if teaser else None
     result['sfx'] = [dict(e, at=round(float(e['at']) + delta, 3)) for e in project.get('sfx') or []

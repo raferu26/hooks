@@ -230,7 +230,7 @@ with sync_playwright() as p:
     # todas as pistas
     pg.click('#tlAll'); pg.wait_for_timeout(150)
     allh = pg.evaluate("[...document.querySelectorAll('#tlHeads div')].map(x=>x.textContent).filter(Boolean)")
-    check('todas_as_pistas', len(allh) == 7, allh)
+    check('todas_as_pistas', len(allh) == 8, allh)   # 8: a faixa "Layout" (cenas de reação) entrou em "Todas as pistas"
     pg.click('#tlAll')
     # 1180px e 1024px: barra sem quebra
     for w in (1280, 1024):
