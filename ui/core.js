@@ -55,6 +55,7 @@ function liveBar(s){
  if(e&&e.by==='automatico')return `<div class="banner error" style="align-items:flex-start"><span class="grow"><b>A gravação parou sozinha${e.at?' às '+hhmm(e.at):''}.</b> ${esc(e.reason||'')}<br><span class="small muted">Isso costuma ser a live acabando, ou a conexão caindo. O que já foi gravado (${s.registered} pedaço${s.registered===1?'':'s'}) continua sendo analisado.</span></span>${retry}</div>`;
  return ''}
 function renderAlerts(){const a=licenseBanners();const miss=Object.entries(state.tools).filter(([k,v])=>!v).map(([k])=>k);if(miss.length)a.push(`<div class="banner error"><span>Ferramentas não encontradas: <b>${esc(miss.join(', '))}</b>. Rode o INSTALAR.bat de novo.</span><button class="small" id="toolsCheck">Verificar</button></div>`);
+ for(const d of (state.dependencies||[]).filter(x=>x.required))a.push(`<div class="banner error"><span><b>Recurso indisponível:</b> ${esc(d.message)}</span></div>`);
  const rg=state.regeneration?.[streamerId];if(rg)a.push(`<div class="banner"><span>Refazendo as sugestões automáticas com o perfil atual. Cortes revisados e exportados foram preservados.</span></div>`);
  if(state.paused&&state.sessions.some(s=>s.streamer===streamerId&&s.enabled&&(s.analyzed<s.registered||!s.closed)))a.push(`<div class="banner"><span>A análise está pausada.</span><button class="small primary" data-do="resume">Iniciar análise</button></div>`);
  const sd=state.streamers.find(x=>x.id===streamerId);

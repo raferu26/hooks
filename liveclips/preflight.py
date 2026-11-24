@@ -5,7 +5,7 @@ Nada aqui altera dados; só lê perfil, ferramentas, disco e a capacidade medida
 """
 import json
 
-from . import media
+from . import deps,media
 from .engine import whisper_plan
 
 
@@ -67,6 +67,13 @@ def tools():
         return _item('ferramentas','erro','Ferramentas ausentes',', '.join(missing)+' não encontrado(s). Rode o INSTALAR.bat de novo'+
                      (' — sem o streamlink não dá para capturar lives.' if 'streamlink' in missing else '.'),'tools')
     return _item('ferramentas','ok','Ferramentas','ffmpeg, ffprobe e streamlink encontrados.')
+
+
+def dependencies():
+    miss=deps.missing()
+    if not miss:return None
+    req=[d for d in miss if d['required']]
+    return _item('dependencias','aviso' if req else 'ok','Pacotes ausentes' if req else 'Pacotes opcionais ausentes',' · '.join(d['message'] for d in miss),'tools')
 
 
 def slots(capture,store):
@@ -143,7 +150,7 @@ def estimate(store,engine):
 def run(store,engine,capture,streamer_id,devices=None):
     profile=store.streamer(streamer_id)['profile']
     lives=len(capture.state())+1
-    checks=[tools(),slots(capture,store),webcam(profile),transcription(profile,engine,devices),models(profile),disk(store,profile,lives),delivery(profile),estimate(store,engine)]
+    checks=[tools(),dependencies(),slots(capture,store),webcam(profile),transcription(profile,engine,devices),models(profile),disk(store,profile,lives),delivery(profile),estimate(store,engine)]
     checks=[c for c in checks if c]
     worst='erro' if any(c['level']=='erro' for c in checks) else 'aviso' if any(c['level']=='aviso' for c in checks) else 'ok'
     return dict(level=worst,checks=checks)

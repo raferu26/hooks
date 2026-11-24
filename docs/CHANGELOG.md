@@ -43,3 +43,9 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 - **RESULTADO:** `_do_render` 28 s de vídeo **15,8 → 6,6 s (−58%)**; e2e "prévia nova pronta" **11 s → 5–6 s** (resolução de 1 s). Fidelidade: novo rascunho × antigo SSIM **0,991**, PSNR **43,5 dB** (fonte sintética).
 - **Não validado:** layouts ao vivo (webcam+jogo) só ganham o `bilinear` (blur não se aplica); vídeo real; CPU com 2+ pistas disputando núcleos (i7-3770).
 - **Próximo:** prévia imediata sobreposta (L1) e render parcial só se a medição mostrar necessidade; latência restante = debounce do autosave (1,6 s) + fila + render.
+
+## [Aviso de dependência ausente] — 24/11/2026 (KI-10)
+- **ANTES:** sem `cv2`/`yt_dlp` o app seguia sem capa, sem gamma e sem rastreio **sem avisar** (36 testes revelaram).
+- **ALTERAÇÃO:** `liveclips/deps.py` (cv2, numpy, yt_dlp obrigatórios; opentimelineio opcional) → `App.state()['dependencies']`, banner vermelho "Recurso indisponível" com o que para de funcionar e como corrigir, e item `dependencias` na pré-checagem (aviso se obrigatório, ok/informativo se opcional).
+- **TESTE:** `tests/test_deps.py` (6) + `test_interface`, `test_http`, `test_sem_ia_guard` (30 OK); verificado no navegador sem OpenCV: banners de opencv e yt-dlp aparecem.
+- **Não coberto:** mensagem dentro do corte quando a capa é pulada (hoje só o evento já existente + banner).
