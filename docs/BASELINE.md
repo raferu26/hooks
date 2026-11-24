@@ -46,7 +46,7 @@ Windows 10/11 (atalho, janela, `.bat`, encerramento) · NVENC/QSV/AMF · i7-3770
 ## 3b. Clipe de 90 s com muitas palavras (V09, após as otimizações de 24/11; ms, p50 / p95)
 | Cortes | mutate (editar cortes) | desfazer | edição sem tocar a fala (zoom): sem memo → com memo | snapshot | DOM | arrasto p95 |
 |---|---|---|---|---|---|---|
-| 100 | 8.45 / 13 | 8.55 / 11.2 | 10.4 / 18.5 → **4.1 / 6.8** | 18.9 KB | 1939 | 0.2 |
-| 200 | 15.4 / 19 | 12.5 / 24.5 | 12.7 / 17.9 → **4.8 / 8.9** | 25.1 KB | 2247 | 0.6 |
-| 500 | 14.6 / 21.8 | 15.95 / 30.4 | 16.1 / 24.7 → **11 / 17.4** | 44.0 KB | 3147 | 0.7 |
-Antes da memorização, o perfil de `mutate` com 100 cortes mostrou `drawLeft` (lista de fala) = **6,2 ms de 11 ms**; o snapshot JSON de desfazer **não** é gargalo (0,08 ms). Meta de 16 ms por ação: atendida no p95 para edições que não alteram a fala (até ~200 cortes); editar cortes (que riscam palavras) ainda redesenha a fala.
+| 100 | **5.65 / 7.1** | 5.1 / 6.6 | 8.1 / 15.4 → **3.9 / 7.8** | 18.9 KB | 1936 | 0.4 |
+| 200 | **6.65 / 10.5** | 5.9 / 10.7 | 8.4 / 15.3 → **5.6 / 9.8** | 25.1 KB | 2247 | 0.7 |
+| 500 | **13.65 / 20.5** | 11.65 / 19.2 | 15.1 / 21.2 → **10.5 / 14.8** | 44.0 KB | 3147 | 1.4 |
+(Corte manual de 90 s, 46 linhas de fala ~270 palavras, `HOOKS_SEED_LONG=1`.) Antes das otimizações, o perfil de `mutate` com 100 cortes mostrou `drawLeft` (lista de fala) = **6,2 ms de 11 ms**; o snapshot JSON de desfazer **não** é gargalo (0,08 ms). Com a lista de fala atualizada no lugar ao editar cortes, a coluna "mutate" ficou **≤ 16 ms no p95 até 200 cortes**; com 500 cortes (estresse irreal para 90 s) o p95 fica em ~20 ms. Medições têm ruído de ±30% entre execuções.

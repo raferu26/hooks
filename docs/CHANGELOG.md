@@ -88,3 +88,10 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 - **RESULTADO:** ver `docs/BASELINE.md` §3b (valores medidos; edição de zoom com 100 cortes: p50/p95 8,1/13,2 → 4,2/8,1 ms na medição de perfil).
 - **Lacunas:** editar cortes/seleção ainda refaz a fala; sem virtualização; Linux/sintético, sem máquina fraca.
 - **Nota de processo:** o commit anterior desta etapa (`5d2af4a`) subiu sem a atualização de docs e com os JSON de benchmark vazios por falha de um servidor de teste; corrigido neste commit seguinte (sem reescrever histórico).
+
+## [Fala: atualizar o risco no lugar ao editar cortes] — 24/11/2026 (N5)
+- **ANTES:** editar cortes refazia a lista de fala inteira (~270 palavras): mutate p50/p95 = 8,5/13 ms (100 cortes) e 15,4/19 ms (200 cortes) no clipe de 90 s.
+- **ALTERAÇÃO** (`ui/studio.js`): se só os cortes mudaram (linhas, seleção, âncora, edição iguais), troca a classe `cutw` das palavras existentes sem recriar o DOM.
+- **TESTE:** e2e `fala_nao_refaz_lista_ao_cortar`, `fala_atualiza_risco_no_lugar`, `fala_desfaz_risco_no_lugar` (+ os anteriores) e e2e completo sem falhas.
+- **RESULTADO:** mutate p50/p95 **5,7/7,1 ms (100 cortes)**, **6,7/10,5 ms (200)**, 13,7/20,5 ms (500). Tabela em `docs/BASELINE.md` §3b.
+- **Lacuna:** mudar a seleção de palavras ainda recria a lista; sem virtualização.

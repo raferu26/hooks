@@ -39,7 +39,7 @@ with sync_playwright() as p:
       const sn=snap().length;
       return {duracao_s:D,cortes:N,mutate_ms:t,undo_ms:u,snapshot_bytes:sn,dom_nos:document.getElementsByTagName('*').length,heap_mb_antes:m0,heap_mb_depois:mem(),undo_niveis:ST.undo.length}}""", N)
     # edição que não altera a fala (zoom): com e sem a memorização da lista de fala (sem = limpa a chave a cada ação, como era antes)
-    z = pg.evaluate("""()=>{ST.proj.zooms=[{id:'zq',start:2,end:4,zoom:1.12,curve:'smooth'}];drawAll();const L=document.getElementById('stLeft');const run=force=>{const t=[];for(let i=0;i<30;i++){if(force)delete L.dataset.memo;const s=performance.now();mutate(()=>{ST.proj.zooms[0].end+=.001});t.push(performance.now()-s)}t.sort((a,b)=>a-b);return {p50:+t[15].toFixed(2),p95:+t[28].toFixed(2)}};
+    z = pg.evaluate("""()=>{ST.proj.zooms=[{id:'zq',start:2,end:4,zoom:1.12,curve:'smooth'}];drawAll();const L=document.getElementById('stLeft');const run=force=>{const t=[];for(let i=0;i<30;i++){if(force){delete L.dataset.base;delete L.dataset.cuts}const s=performance.now();mutate(()=>{ST.proj.zooms[0].end+=.001});t.push(performance.now()-s)}t.sort((a,b)=>a-b);return {p50:+t[15].toFixed(2),p95:+t[28].toFixed(2)}};
       const sem=run(true),com=run(false);return {linhas_de_fala:ST.lines.length,sem_memo:sem,com_memo:com}}""")
     r['mutate_zoom'] = z
     for k in ('mutate_ms', 'undo_ms'):

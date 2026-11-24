@@ -1,0 +1,39 @@
+{
+ "abrir_estudio_ms": 280,
+ "duracao_s": 90,
+ "cortes": 100,
+ "snapshot_bytes": 19345,
+ "dom_nos": 1936,
+ "heap_mb_antes": 3.481229782104492,
+ "heap_mb_depois": 5.307389259338379,
+ "undo_niveis": 20,
+ "mutate_zoom": {
+  "linhas_de_fala": 46,
+  "sem_memo": {
+   "p50": 8.1,
+   "p95": 15.4
+  },
+  "com_memo": {
+   "p50": 3.9,
+   "p95": 7.8
+  }
+ },
+ "mutate": {
+  "p50": 5.65,
+  "p95": 7.1,
+  "max": 8.2
+ },
+ "undo": {
+  "p50": 5.1,
+  "p95": 6.6,
+  "max": 6.6
+ },
+ "arrasto": {
+  "pointermove_p50_ms": 0.1,
+  "pointermove_p95_ms": 0.4,
+  "pointermove_max_ms": 0.5,
+  "redesenhos_durante_arrasto": 0,
+  "redesenhos_total": 1,
+  "final_start": 10.03
+ }
+}

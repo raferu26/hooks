@@ -215,6 +215,15 @@ with sync_playwright() as p:
     pg.keyboard.press('Control+z'); pg.wait_for_timeout(250)
     check('fala_desfazer_limpa_risco', pg.evaluate("document.querySelectorAll('#stLeft .w.cutw').length") == c0)
     pg.evaluate("ST.sel=null;drawLeft();drawTimeline();drawRight()")
+    # só os cortes mudam (sem mexer na seleção): a lista de fala é atualizada no lugar, sem recriar as palavras
+    pg.evaluate("ST.sel=null;ST.anchor=null;drawLeft()")
+    pg.evaluate("document.querySelector('#stLeft .w').__marca=1")
+    n0 = pg.evaluate("document.querySelectorAll('#stLeft .w.cutw').length")
+    pg.evaluate("(()=>{const l=ST.lines[1];mutate(()=>{ST.proj.cuts.push({_k:'e2e1',start:l.start,end:l.end})})})()"); pg.wait_for_timeout(200)
+    check('fala_nao_refaz_lista_ao_cortar', pg.evaluate("document.querySelector('#stLeft .w').__marca===1"))
+    check('fala_atualiza_risco_no_lugar', pg.evaluate("document.querySelectorAll('#stLeft .w.cutw').length") > n0)
+    pg.keyboard.press('Control+z'); pg.wait_for_timeout(200)
+    check('fala_desfaz_risco_no_lugar', pg.evaluate("document.querySelectorAll('#stLeft .w.cutw').length") == n0)
     # seletor de qualidade
     modes = pg.evaluate("[...document.querySelectorAll('#stQuality option')].map(o=>o.value)")
     check('quatro_modos_no_exportar', modes == ['rapido', 'equilibrado', 'qualidade', 'entrega'], modes)
