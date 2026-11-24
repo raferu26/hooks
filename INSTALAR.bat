@@ -39,12 +39,8 @@ goto js_ok
 :js_aviso
 echo AVISO: instale o Deno ou o Node.js para baixar musicas do YouTube por link. Enviar o arquivo de audio funciona sem isso.
 :js_ok
-echo Preparando o modelo gratuito de movimentos faciais...
-".venv\Scripts\python.exe" -m liveclips.behavior
-if errorlevel 1 (
- echo AVISO: o modelo facial nao foi baixado, talvez sem internet. O Hook's funciona sem ele: o modo sem IA e a analise de voz e movimento seguem normais.
- echo Para ativar a leitura facial depois, execute este instalador de novo com internet.
-)
+echo Nenhum modelo e baixado por este instalador (decisao: Hook's sem IA). O modo sem IA funciona sem eles.
+echo O reconhecimento de fala e a leitura facial opcionais so baixam modelos se voce ativa-los dentro do aplicativo.
 ".venv\Scripts\python.exe" -m liveclips.diagnostics
 if not errorlevel 1 goto pronto
 echo.
