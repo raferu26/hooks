@@ -114,3 +114,10 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 ## [Fidelidade prévia × exportação final — medição] — 24/11/2026
 - **Medição** (corte de 28 s, vídeo sintético, modo Equilibrado, CPU): SSIM do final (1080×1920 reduzido a 540×960) contra o **rascunho novo** = **0,9759**; contra o **rascunho antigo** (mesmo trecho, filtros de 0.19) = **0,9757**. A otimização do rascunho **não** reduziu a fidelidade ao arquivo final (diferença 0,0002). Tempos: prévia 6,5 s; exportação 35,1 s.
 - **Limites:** fonte sintética; legenda/título do final não aparecem no rascunho (a prévia usa legenda ao vivo em HTML — comparação lado a lado com libass segue pendente, V04); GPU não testada.
+
+## [Sem IA, fase 1: legenda por texto colado] — 24/11/2026 (branch `feature/sem-ia-legenda-texto`)
+- **O que é:** `liveclips/captions_text.py` + rota `/api/session/subtitles/paste`: o usuário cola o texto; o app distribui as frases no **tempo de fala detectado por energia** (`technical.envelope/silences`), peso por sílabas (heurística do português), com as **pausas do áudio como fronteiras de frase**; toques opcionais fixam o início de cada frase. Gera `legendas/legenda_texto_colado.srt`, que entra no caminho de legendas importadas já existente. Sem modelos, sem rede.
+- **O que NÃO é:** não ouve a fala. Os tempos são **estimados** (`timing:'estimado'`; `'toques'` com toques) e o texto precisa corresponder ao áudio; o app avisa quando as sílabas por segundo são incompatíveis. Tempo por palavra é estimativa dentro da frase.
+- **TESTE:** `tests/test_captions_text.py` (12: frases, sílabas, ancoragem nas rajadas de fala, texto nunca perdido, toques, avisos, SRT aceito pelo importador) + `test_markers_api` (rota). 18 OK.
+- **Achado de projeto:** a distribuição só proporcional errava ~1,6 s numa fala com três rajadas (frases de tamanhos diferentes); ancorar nas pausas corrigiu (início das frases a <0,35 s das rajadas, em sinal sintético).
+- **Não feito:** tela para colar texto e marcar toques no Estúdio; validação com fala real (erro de tempo em ms); `words` estimadas ainda não chegam ao renderizador (SRT é por frase).

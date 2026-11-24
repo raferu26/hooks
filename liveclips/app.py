@@ -352,6 +352,8 @@ class App:
                 return self.markers_state(s.session(payload['session']))
             if path=='/api/session/subtitles/import':
                 return self.import_subtitles(s.session(payload['session']),payload)
+            if path=='/api/session/subtitles/paste':
+                return self.paste_subtitles(s.session(payload['session']),payload)
             if path=='/api/session/subtitles/clear':
                 folder=Path(s.session(payload['session'])['path'])/'legendas'
                 for f in folder.glob('*') if folder.is_dir() else []:
@@ -850,6 +852,27 @@ class App:
             for r in risks:s.event('mídia: '+r['id'],r['message'][:160])
         except Exception:pass   # o inventário informa riscos; nunca impede a importação
         return dict(id=sid,riscos=risks)
+
+    def paste_subtitles(self,session,payload):
+        """Legenda a partir do texto colado pelo usuário (sem reconhecimento de fala): distribui as frases no tempo de fala detectado
+        por energia. `start`/`end` (tempo da sessão) delimitam o trecho; `taps` (opcional) fixam o início de cada frase. Gera um SRT em
+        `legendas/` e devolve o estado de marcadores/legendas com `warnings` e `timing:'estimado'`."""
+        from . import captions_text,technical,timeline
+        start=float(payload['start']);end=float(payload['end'])
+        if not 0<=start<end or end-start>600:raise ValueError('Escolha um trecho de até 10 minutos.')
+        if not captions_text.split_phrases(payload.get('text')):raise ValueError('Cole ou digite o texto da legenda.')
+        rows=timeline.build_timeline(self.store.segments(session['id']))
+        parts=timeline.plan(rows,start,end)
+        dbs=[]
+        for part in parts:
+            db,step=technical.envelope(part['path'],part['in'],part['out']-part['in']);dbs.append(db)
+        import numpy as np
+        db=np.concatenate(dbs) if dbs else np.zeros(0,dtype=np.float32)
+        result=captions_text.build(str(payload.get('text') or ''),db,step,offset=start,taps=payload.get('taps') or None,clip_end=end)
+        folder=Path(session['path'])/'legendas';folder.mkdir(exist_ok=True)
+        atomic.write_text(folder/'legenda_texto_colado.srt',result['srt'])
+        self.store.event('legenda','Legenda por texto colado: '+str(len(result['segments']))+' frases (tempos estimados, origem: texto do usuário)')
+        return dict(self.markers_state(session),imported=len(result['segments']),warnings=result['warnings'],timing='toques' if payload.get('taps') else 'estimado')
 
     def import_subtitles(self,session,payload):
         name=Path(str(payload.get('name') or 'legenda.srt')).name

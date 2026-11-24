@@ -3,6 +3,9 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
+
+import numpy as np
 
 from liveclips.app import App
 from tests.helpers import setup_session
@@ -48,6 +51,23 @@ class MarkersApi(unittest.TestCase):
         self.assertEqual(cleared['subtitles']['count'], 0)
         with self.assertRaises(ValueError):
             self.call('/api/session/subtitles/import', name='fala.doc', content=srt)
+
+    def test_paste_text_builds_estimated_subtitles_and_warns(self):
+        from liveclips import technical
+        rng = np.random.default_rng(1); x = rng.standard_normal(technical.RATE * 12).astype(np.float32) * 1e-3
+        for a, b in ((1, 4), (6, 10)):
+            x[a * technical.RATE:b * technical.RATE] += rng.standard_normal((b - a) * technical.RATE).astype(np.float32) * .1
+        db, step = technical.envelope_of(x)
+        with mock.patch('liveclips.technical.envelope', return_value=(db, step)):
+            r = self.call('/api/session/subtitles/paste', text='primeira frase colada\nsegunda frase colada', start=10, end=22)
+        self.assertEqual(r['imported'], 2)
+        self.assertEqual(r['timing'], 'estimado')
+        self.assertEqual(r['subtitles']['count'], 2)
+        self.assertGreaterEqual(r['subtitles']['first'], 10)                      # tempos de sessão, não do trecho
+        with self.assertRaises(ValueError):
+            self.call('/api/session/subtitles/paste', text='  ', start=10, end=22)
+        with self.assertRaises(ValueError):
+            self.call('/api/session/subtitles/paste', text='x', start=10, end=2000)
 
     def test_clear_markers(self):
         self.call('/api/session/marker', time=30)
