@@ -298,18 +298,22 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
 .pub{white-space:pre-wrap;font:12px/1.5 var(--mono);margin:0;max-height:260px;overflow:auto;color:var(--ink)}
 
 /* prévia ao vivo: legenda e título desenhados no navegador por cima do vídeo (unidades relativas à altura do quadro 1280) */
-.live{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden;font-family:"Segoe UI Variable Display","Segoe UI",Arial,sans-serif}
-.live .cap{position:absolute;left:6%;right:6%;text-align:center;line-height:1.12;font-weight:800;color:#fff;text-shadow:0 .25cqh .8cqh #000c;paint-order:stroke fill;-webkit-text-stroke:.35cqh #000}
-.live .cap .w{display:inline-block;margin:0 .35cqh}
+.live{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden;font-family:Arial,"Liberation Sans",Helvetica,sans-serif}   /* a exportação usa Arial por padrão (captions.make_ass): a prévia usa a mesma fonte */
+.live .cap{position:absolute;left:6%;right:6%;text-align:center;line-height:1.12;font-weight:700;color:#fff;text-shadow:0 .25cqh .8cqh #000c;paint-order:stroke fill;-webkit-text-stroke:.35cqh #000}
+.live .cap .w{display:inline-block;margin:0}
 .live .cap .w.on{color:var(--cap-color,#ffd400);transform:scale(1.08)}
-.live .cap.s-clean{font-weight:650;-webkit-text-stroke:.25cqh #000}
-.live .cap.s-minimal{font-weight:500;-webkit-text-stroke:.15cqh #000;font-size:.88em}
-.live .cap.s-bold,.live .cap.s-impact{font-weight:900;text-transform:uppercase;-webkit-text-stroke:.5cqh #000;letter-spacing:.02em}
+.live .cap.s-clean{-webkit-text-stroke:.25cqh #000}
+.live .cap.s-minimal{-webkit-text-stroke:.15cqh #000}
+.live .cap.s-bold,.live .cap.s-impact{-webkit-text-stroke:.5cqh #000}   /* a exportação usa SEMPRE negrito, sem espaçamento extra (Style: Bold=-1, Spacing=0) */
+.live .cap.s-impact{text-transform:uppercase}   /* só o impact usa caixa alta na exportação (CAPTION_STYLES.upper) */
 .live .cap.s-box{-webkit-text-stroke:0;text-shadow:none}
 .live .cap.s-box span.in{background:#000c;border-radius:1.2cqh;padding:.6cqh 1.6cqh;display:inline-block}
-.live .ttl{position:absolute;left:6%;right:6%;text-align:center;font-weight:850;line-height:1.1;color:var(--tc,#fff);-webkit-text-stroke:.4cqh #000;paint-order:stroke fill;text-shadow:0 .3cqh 1cqh #000a}
-.live .ttl.bar{left:0;right:0;-webkit-text-stroke:0;text-shadow:none;background:#000d;padding:1.6cqh 5%}
-.live .ttl.top{font-weight:700}
+.live .ttl{position:absolute;left:6%;right:6%;text-align:center;font-weight:700;line-height:1.1;color:var(--ink,var(--tc,#fff));-webkit-text-stroke:.4cqh #000;paint-order:stroke fill;text-shadow:0 .3cqh 1cqh #000a}
+.live .ttl.t-big{color:var(--tc,#fff)}
+.live .ttl.t-bar,.live .ttl.t-top{-webkit-text-stroke:0;text-shadow:none}
+.live .ttl.t-bar .in{display:inline-block;background:var(--tc,#fff);padding:1.1cqh 1.1cqh}
+.live .ttl.t-top{color:var(--tc,#fff)}
+.live .ttl.t-top .in{display:inline-block;background:#0006;padding:.8cqh .8cqh;letter-spacing:.07cqh;position:relative;top:-.8cqh}
 .live-note{position:absolute;left:8px;bottom:8px;z-index:6;font-size:var(--fs-xs);color:#fff;background:#000a;border-radius:6px;padding:2px 7px;pointer-events:none}
 
 @media(max-width:1180px){.smain{grid-template-columns:240px 1fr 320px}#stFlow,#stPrev,#stSteps{display:none}.settings{grid-template-columns:1fr}.subnav{position:static;display:flex;flex-wrap:wrap}}
@@ -397,6 +401,7 @@ dialog.cmd{width:min(560px,94vw);margin-top:12vh;overflow:hidden}
 .cmd .empty{padding:14px 18px;color:var(--muted)}
 .cmd-foot{padding:8px 16px;border-top:1px solid var(--line)}
 .snapguide{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--aqua);box-shadow:0 0 8px var(--aqua);pointer-events:none;z-index:7;display:none}
+/* classes t-big/t-bar/t-top: a classe `bar` colidia com a barra de progresso global (.bar) e achatava o título em faixa */
 
 </style></head>
 <body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -1350,6 +1355,52 @@ $('stKeys').onclick=showKeys;
 
 document.addEventListener('click',async e=>{if(e.target.id!=='deliverRetry')return;e.target.disabled=true;try{const r=await api('/api/delivery/retry',{id:ST.id});toast(r.delivery.status==='ok'?'Copiado para a pasta de entrega.':'Ainda não deu: '+(r.delivery.error||r.delivery.status),r.delivery.status!=='ok');await refresh(true);if(ST.open)drawRight()}catch(err){toast(err.message,true);e.target.disabled=false}});
 
+/* Quebra da legenda em blocos, IDÊNTICA à da exportação (captions.smart_groups / CAPTION_STYLES). Funções puras: valem no navegador e no node.
+   A paridade com o Python é garantida por tests/test_legenda_previa.py (mesmas entradas, mesmos blocos). Não edite sem rodar o teste. */
+const CAP_WEAK=new Set(['a','o','as','os','um','uma','de','do','da','dos','das','em','no','na','nos','nas','por','para','pra','com','que','e','ou','se','mas','ao','the','of','to','and','in','on']);
+const CAP_CHUNK={impact:[3,18],box:[4,24]};   /* [max_words, max_chars] por estilo; os demais usam 4/26 (CAPTION_STYLES) */
+function capPlain(v){return String(v).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'')}
+function capLen(s){return Array.from(s).length}
+function capSmartGroups(words,maxWords,maxChars){
+ const out=[];let g=[];
+ for(const w of words){
+  if(g.length){
+   const gap=w.start-g[g.length-1].end,last=g[g.length-1].text;
+   const hard=/[.!?\u2026]$/.test(last.replace(/["\u201d\u2019)\u00bb]+$/,''));
+   const soft=g.length>=2&&/[,;:]$/.test(last);
+   const full=g.length>=maxWords||capLen(g.map(x=>x.text).concat([w.text]).join(' '))>maxChars;
+   if(hard||soft||gap>.35||full){
+    if(full&&!(hard||soft)&&gap<=.35&&g.length>1&&CAP_WEAK.has(capPlain(last))){const carry=g.pop();out.push(g);g=[carry]}
+    else{out.push(g);g=[]}
+   }
+  }
+  g.push(w);
+ }
+ if(g.length)out.push(g);
+ return out}
+function capChunkFor(style){return CAP_CHUNK[style]||[4,26]}
+/* palavras de todas as linhas do Estúdio, na ordem, no formato do exportador {start,end,text} */
+function capWordsOf(lines){const ws=[];for(const l of lines)for(const w of(l.words||[]))ws.push({start:w.start,end:w.end,text:w.word});return ws}
+/* bloco visível no instante t (o exportador mostra cada bloco de início da 1ª palavra até o fim da última) */
+function capGroupAt(groups,t){for(const g of groups){if(t>=g[0].start-.02&&t<=g[g.length-1].end+.02)return g}return null}
+/* Títulos: as MESMAS quebras de linha do exportador (textwrap.wrap(width)[:3]); tamanhos/margens/estilos = captions.title_blocks */
+const TITLE_SPEC={big:{size:66,wrap:16,upper:true},top:{size:36,wrap:30,upper:false},bar:{size:50,wrap:22,upper:false}};
+const TITLE_MARGIN={top:170,center:0,bottom:430};   /* unidades de 1280 de altura (MarginV do ASS) */
+function capWrap(text,width,maxLines){
+ /* mesmo algoritmo do textwrap.wrap do Python (sem quebra em hífen): palavra maior que a linha ocupa o espaço que sobra na linha atual */
+ const words=String(text).split(/\s+/).filter(Boolean),lines=[];let cur='';
+ for(let w of words){
+  while(capLen(w)>width){
+   if(cur){const used=capLen(cur)+1;if(used<=width){const space=width-used,A=Array.from(w);lines.push((cur+' '+A.slice(0,space).join('')).trim());w=A.slice(space).join('')}else{lines.push(cur)}cur=''}
+   else{const A=Array.from(w);lines.push(A.slice(0,width).join(''));w=A.slice(width).join('')}
+  }
+  if(!w)continue;
+  if(!cur)cur=w;else if(capLen(cur)+1+capLen(w)<=width)cur+=' '+w;else{lines.push(cur);cur=w}
+ }
+ if(cur)lines.push(cur);
+ return lines.slice(0,maxLines||3)}
+if(typeof module!=='undefined')module.exports={capSmartGroups,capChunkFor,capWordsOf,capGroupAt,capPlain,capWrap,TITLE_SPEC,TITLE_MARGIN};
+
 /* ───── ajustes: seções, agentes, marca, áudio, CSV e diagnóstico ───── */
 const ico=n=>`<svg class="i"><use href="#i-${n}"/></svg>`;
 let brandDraft=null,brandImages=[],learnData=null;
@@ -1429,19 +1480,37 @@ $('memBox').addEventListener('click',async e=>{const id=e.target.dataset.memForg
 
 /* ───── prévia ao vivo: legenda e título desenhados sobre o vídeo, no relógio do clipe ───── */
 const LIVE={on:true};
+/* libass mede Fontsize pela altura da célula da linha (ascendente+descendente), o CSS pela altura do em: mesma fonte e mesmo número saem ~10% menores no vídeo final.
+   Fator medido com a mesma fonte (validacao/legenda_fidelidade.py): largura ASS/HTML = 0,899. */
+const CAP_SCALE=.9;
+/* [deslocamento de tamanho, teto] por estilo = CAPTION_STYLES de captions.py (tests/test_legenda_previa.py garante que não divergem) */
+const CAP_SIZE={dynamic:[0,0],clean:[-3,0],bold:[5,68],minimal:[-6,0],impact:[8,70],pop:[2,0],box:[-2,0]};
+function capSize(style,base){const [off,cap]=CAP_SIZE[style]||[0,0];return style==='dynamic'?base:Math.min(cap||1e9,Math.max(24,base+off))}
 function liveCaptionLook(){const P=ST.proj,d=ST.data,pf=d.profile;let style=P.captions.style||pf.caption_style||'dynamic';if(style==='auto')style='dynamic';
- return{style,size:P.captions.size??pf.font_size??46,margin:P.captions.margin??pf.caption_margin??340,color:P.captions.color||(pf.caption_color?rgb(pf.caption_color):'#ffd400'),font:pf.brand_font||''}}
+ return{style,size:capSize(style,P.captions.size??pf.font_size??46),margin:P.captions.margin??pf.caption_margin??340,color:P.captions.color||(pf.caption_color?rgb(pf.caption_color):'#ffd400'),font:pf.brand_font||''}}
 function liveLine(t){for(const l of ST.lines){if(t>=l.start-.02&&t<=l.end+.05)return l}return null}
+let CAPG={key:'',groups:[]};
+function capGroupsNow(style){const key=style+'|'+ST.id+'|'+ST.rev+'|'+ST.lines.length;if(CAPG.key!==key){const [mw,mc]=capChunkFor(style);CAPG={key,groups:capSmartGroups(capWordsOf(ST.lines),mw,mc)}}return CAPG.groups}
 function drawLive(){const host=$('live');if(!host||!ST.open)return;
  if(!LIVE.on||!ST.data.preview.available){host.innerHTML='';return}
  const v=$('stVideo'),t=isNaN(v.currentTime)?0:finalToClip(v.currentTime),look=liveCaptionLook(),P=ST.proj;let html='';
  // títulos (1280 de altura = 100cqh)
- for(const ti of P.titles){if(t<ti.start||t>ti.end)continue;const st=ti.style||'big',pos=ti.position||'top',size=st==='top'?52:st==='bar'?58:84;
-  const y=pos==='top'?'top:12cqh':pos==='center'?'top:50cqh;transform:translateY(-50%)':'bottom:26cqh';
-  html+=`<div class="ttl ${st}" style="${y};font-size:${size/12.8}cqh;--tc:${esc(ti.color||'#fff')}">${esc(ti.text)}</div>`}
- if(P.captions.enabled){const l=liveLine(t);if(l){const words=l.words&&l.words.length?l.words:null;
+ for(const ti of P.titles){if(t<ti.start||t>ti.end)continue;const st=TITLE_SPEC[ti.style||'big']?(ti.style||'big'):'big',pos=ti.position||'top',sp=TITLE_SPEC[st];
+  /* tamanho, margens, caixa alta e quebras = captions.title_blocks (tests/test_legenda_previa.py); a barra e o título de topo têm caixa atrás, como no ASS (BorderStyle 3) */
+  const hex=/^#[0-9a-f]{6}$/i.test(ti.color||'')?ti.color:'#ffffff',lum=(.299*parseInt(hex.slice(1,3),16)+.587*parseInt(hex.slice(3,5),16)+.114*parseInt(hex.slice(5,7),16))/255;
+  const mv=pos==='top'&&ti.margin_frac!=null?Math.max(0,Math.min(900,Math.round(+ti.margin_frac*1280))):(TITLE_MARGIN[pos]??170);
+  const y=pos==='center'?'top:50cqh;transform:translateY(-50%)':pos==='bottom'?`bottom:${mv/12.8}cqh`:`top:${mv/12.8}cqh`;
+  const txt=capWrap(sp.upper?String(ti.text).toUpperCase():String(ti.text),sp.wrap,3).map(esc).join('<br>');
+  const ink=st==='bar'?(lum>.55?'#101010':'#fff'):hex;
+  html+=`<div class="ttl t-${st}" style="${y};font-size:${sp.size/12.8*CAP_SCALE}cqh;--tc:${esc(hex)};--ink:${ink}"><span class="in">${txt}</span></div>`}
+ if(P.captions.enabled){const l=liveLine(t);
+  /* Sem edição de texto, a exportação quebra a fala em blocos pelo estilo (captions.smart_groups); com texto editado, cada linha é um bloco.
+     A prévia faz o mesmo: mostra o bloco que a exportação mostraria neste instante (paridade: tests/test_legenda_previa.py). */
+  let words=l&&l.words&&l.words.length?l.words:null,shown=l;
+  if(l&&words&&!ST.linesEdited){const gr=capGroupsNow(look.style),g=capGroupAt(gr,t);if(g){words=g.map(w=>({start:w.start,end:w.end,word:w.text}));shown=l}else shown=null}
+  if(shown){
   const inner=words?words.map(w=>`<span class="w${t>=w.start&&t<=w.end+.02?' on':''}">${esc(w.word)}</span>`).join(' '):esc(l.text);
-  html+=`<div class="cap s-${look.style}" style="bottom:${look.margin/12.8}cqh;font-size:${look.size/12.8}cqh;--cap-color:${esc(look.color)};${look.font?`font-family:'${esc(look.font)}',sans-serif;`:''}"><span class="in">${inner}</span></div>`}}
+  html+=`<div class="cap s-${look.style}" style="bottom:${look.margin/12.8}cqh;font-size:${look.size/12.8*CAP_SCALE}cqh;--cap-color:${esc(look.color)};${look.font?`font-family:'${esc(look.font)}',sans-serif;`:''}"><span class="in">${inner}</span></div>`}}
  if(host.innerHTML!==html)host.innerHTML=html}
 $('liveToggle').onchange=()=>{LIVE.on=$('liveToggle').checked;drawLive()};
 
