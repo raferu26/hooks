@@ -10,8 +10,6 @@
  "exemplos_pequenos": [],
  "contraste_abaixo_AA": 0,
  "exemplos_contraste": [],
- "alvos_menores_que_28px": 9,
- "exemplos_alvos": [
-  "quiet small 25x28"
- ]
+ "alvos_menores_que_28px": 0,
+ "exemplos_alvos": []
 }
