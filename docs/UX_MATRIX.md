@@ -9,7 +9,7 @@ Evidência = leitura do código (`ui/`) e e2e `ui/e2e10.py` (1440×900, Linux, m
 | P04 | Salvar ≠ renderizar | **Resolvido** | Ctrl+S → `saveNow()`; autosave `learn=False` | `test_salvar_previa` (9), e2e | — |
 | P05 | 8 pistas | **Resolvido** em 3 + extras | e2e `tres_pistas`, `pista_zoom_aparece`, `todas_as_pistas` | e2e | Ripple e arrasto sem redesenho (snap já feito) |
 | P06 | Hierarquia visual | **Parcial**: escala tipográfica (4 tamanhos), mínimo 12 px, alvos ≥28 px | `validacao/medir_design.py` (17→0 fontes <12 px; 18→0 alvos <28 px) | `test_design_tokens` | Hierarquia por cor/peso, espaçamento 4 px, contraste dos blocos da timeline |
-| P07 | Fluxo fragmentado | **Parcial** (`#stFlow` oculto <1180 px) | `style.css` 305 | e2e parcial | Revisar fluxo Importar→Editar→Conferir→Exportar |
+| P07 | Fluxo fragmentado | **Parcial**: indicador de etapas pelo estado real (Editar → Conferir → Exportar) | e2e `etapa_*` | e2e | Etapas clicáveis; revisar a tela Adicionar; testar com iniciantes |
 | P08 | Feedback de estado | **Resolvido** (Salvo/Salvando/…/Prévia anterior) | e2e `estado_nao_salvo`, `autosave_salvo`, `previa_marcada_anterior` | e2e | — |
 | P09 | Atalhos | **Parcial**: guarda de campo, `?`, Ctrl+Z/Y | `studio.js` 421–440 | e2e `ctrl_z`, `atalhos_dialogo` | Ctrl+K e mapa pesquisável (A04) |
 | P10 | Modos de qualidade | **Resolvido em CPU**; GPU não validada | medição: 4 comandos distintos (BASELINE §4) | `test_modos_qualidade` (9) | Validar NVENC/QSV/AMF (C02, precisa de GPU) |

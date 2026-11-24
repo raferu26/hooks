@@ -312,7 +312,7 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
 .live .ttl.top{font-weight:700}
 .live-note{position:absolute;left:8px;bottom:8px;z-index:6;font-size:var(--fs-xs);color:#fff;background:#000a;border-radius:6px;padding:2px 7px;pointer-events:none}
 
-@media(max-width:1180px){.smain{grid-template-columns:240px 1fr 320px}#stFlow,#stPrev{display:none}.settings{grid-template-columns:1fr}.subnav{position:static;display:flex;flex-wrap:wrap}}
+@media(max-width:1180px){.smain{grid-template-columns:240px 1fr 320px}#stFlow,#stPrev,#stSteps{display:none}.settings{grid-template-columns:1fr}.subnav{position:static;display:flex;flex-wrap:wrap}}
 @media(max-width:980px){.smain{grid-template-columns:190px 1fr 290px}.sbar #stRefresh,.sbar #stKeys{display:none}}
 @media(max-width:860px){.app{grid-template-columns:1fr}.sidebar{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center}.side-foot{margin-top:0;width:100%}.nav{display:flex}.smain{grid-template-columns:1fr;overflow:auto}.scol{max-height:40vh}.view{padding:18px}.flow{grid-template-columns:1fr 1fr}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -379,6 +379,13 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
  .sbox .transport .switch{flex:1 0 100%}
 }
 #stState{min-height:var(--tap);display:inline-flex;align-items:center}
+/* Etapas do corte (P07): Importar → Editar → Conferir → Exportar, calculadas do estado real */
+.steps{display:flex;justify-content:center;gap:4px;list-style:none;margin:0;padding:0;font-size:var(--fs-sm);white-space:nowrap;overflow:hidden}
+.steps li{display:flex;align-items:center;gap:6px;color:var(--faint)}
+.steps li+li::before{content:'›';color:var(--line2);margin-right:2px}
+.steps li.done{color:var(--muted)}
+.steps li.now{color:var(--ink);font-weight:650}
+.steps li.now b{background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:1px 9px;font-weight:650}
 
 </style></head>
 <body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -483,7 +490,7 @@ kbd{font:12px var(--mono);background:var(--raised);border:1px solid var(--line2)
 <div id="studio" class="hide" role="dialog" aria-label="Estúdio de edição">
  <div class="sbar">
   <button id="stBack" class="quiet" title="Voltar à biblioteca (salva antes)">← Voltar</button><span class="name" id="stName"></span><button type="button" class="chip" id="stState"></button><span class="chip" id="stPrev"></span><span class="small muted" id="stFlow" aria-live="polite"></span>
-  <span class="grow"></span>
+  <span class="grow"><ol class="steps" id="stSteps" aria-label="Etapas do corte"></ol></span>
   <button id="stUndo" class="quiet small" title="Desfazer (Ctrl+Z)" aria-label="Desfazer">↶</button><button id="stRedo" class="quiet small" title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer">↷</button><button id="stKeys" class="quiet small" title="Atalhos do teclado (?)" aria-label="Atalhos do teclado">?</button>
   <button id="stRefresh" title="Gera a prévia com as alterações (P)">Atualizar prévia</button>
   <button id="stReject" class="danger" title="Rejeitar (R)">Rejeitar</button>
@@ -879,7 +886,14 @@ function drawBar(){const d=ST.data,p=d.preview;$('stName').textContent=(ST.proj.
  $('stRefresh').classList.toggle('primary',!!(ST.dirty||(!p.ready&&!['queued','working'].includes(p.status))));
  $('stStale').classList.toggle('hide',!(p.available&&(!p.ready||ST.dirty)&&!['queued','working'].includes(p.status)));
  $('stBusy').classList.toggle('hide',!(p.available&&['queued','working'].includes(p.status)));
- if($('stAuto'))$('stAuto').checked=PREF.autoPrev}
+ if($('stAuto'))$('stAuto').checked=PREF.autoPrev;drawSteps()}
+/* Etapa atual, do estado real: exportando/pronto → Exportar; alterações ou prévia desatualizada → Editar; senão → Conferir */
+function stepNow(){const d=ST.data,p=d.preview;if(['approved','exporting','done'].includes(d.status))return 'exportar';return(ST.dirty||ST.saving||!p.ready)?'editar':'conferir'}
+function drawSteps(){const el=$('stSteps');if(!el)return;const now=stepNow(),d=ST.data;
+ const label={editar:'Editar',conferir:'Conferir',exportar:d.status==='done'?'Exportado':['approved','exporting'].includes(d.status)?'Exportando…':'Exportar'};
+ const tip={importar:'O vídeo já foi importado.',editar:'Ajuste cortes, zoom, legendas e títulos. Salva sozinho.',conferir:'Assista à prévia e confira os avisos antes de exportar.',exportar:'Escolha a qualidade e exporte (Ctrl+Enter duas vezes).'};
+ const order=['importar','editar','conferir','exportar'],at=order.indexOf(now);
+ el.innerHTML=order.map((k,i)=>{const cls=i<at?'done':i===at?'now':'';const text=k==='importar'?'Importar':label[k];return `<li class="${cls}" title="${esc(tip[k])}"${i===at?' aria-current="step"':''}>${i<at?'✓ ':''}${i===at?`<b>${esc(text)}</b>`:esc(text)}</li>`}).join('')}
 function drawStage(){const d=ST.data,w=$('stWait'),v=$('stVideo');const p=d.preview,st=p.status;
  if(p.available){w.classList.add('hide');const key='/media/preview?id='+ST.id+'&pv='+p.version;if(ST.videoKey!==key){const at=v.currentTime||0,was=!v.paused;ST.videoKey=key;v.src=key;if(at){v.addEventListener('loadedmetadata',()=>{try{v.currentTime=Math.min(at,v.duration||at)}catch(e){}if(was)v.play().catch(()=>{})},{once:true})}}}
  else{w.classList.remove('hide');if(st==='queued'||st==='working')w.innerHTML='<strong>Gerando a prévia…</strong><span class="muted small">Leva alguns segundos. Ela aparece aqui sozinha. Você já pode editar: legendas e títulos aparecem ao vivo.</span>';

@@ -55,7 +55,14 @@ function drawBar(){const d=ST.data,p=d.preview;$('stName').textContent=(ST.proj.
  $('stRefresh').classList.toggle('primary',!!(ST.dirty||(!p.ready&&!['queued','working'].includes(p.status))));
  $('stStale').classList.toggle('hide',!(p.available&&(!p.ready||ST.dirty)&&!['queued','working'].includes(p.status)));
  $('stBusy').classList.toggle('hide',!(p.available&&['queued','working'].includes(p.status)));
- if($('stAuto'))$('stAuto').checked=PREF.autoPrev}
+ if($('stAuto'))$('stAuto').checked=PREF.autoPrev;drawSteps()}
+/* Etapa atual, do estado real: exportando/pronto → Exportar; alterações ou prévia desatualizada → Editar; senão → Conferir */
+function stepNow(){const d=ST.data,p=d.preview;if(['approved','exporting','done'].includes(d.status))return 'exportar';return(ST.dirty||ST.saving||!p.ready)?'editar':'conferir'}
+function drawSteps(){const el=$('stSteps');if(!el)return;const now=stepNow(),d=ST.data;
+ const label={editar:'Editar',conferir:'Conferir',exportar:d.status==='done'?'Exportado':['approved','exporting'].includes(d.status)?'Exportando…':'Exportar'};
+ const tip={importar:'O vídeo já foi importado.',editar:'Ajuste cortes, zoom, legendas e títulos. Salva sozinho.',conferir:'Assista à prévia e confira os avisos antes de exportar.',exportar:'Escolha a qualidade e exporte (Ctrl+Enter duas vezes).'};
+ const order=['importar','editar','conferir','exportar'],at=order.indexOf(now);
+ el.innerHTML=order.map((k,i)=>{const cls=i<at?'done':i===at?'now':'';const text=k==='importar'?'Importar':label[k];return `<li class="${cls}" title="${esc(tip[k])}"${i===at?' aria-current="step"':''}>${i<at?'✓ ':''}${i===at?`<b>${esc(text)}</b>`:esc(text)}</li>`}).join('')}
 function drawStage(){const d=ST.data,w=$('stWait'),v=$('stVideo');const p=d.preview,st=p.status;
  if(p.available){w.classList.add('hide');const key='/media/preview?id='+ST.id+'&pv='+p.version;if(ST.videoKey!==key){const at=v.currentTime||0,was=!v.paused;ST.videoKey=key;v.src=key;if(at){v.addEventListener('loadedmetadata',()=>{try{v.currentTime=Math.min(at,v.duration||at)}catch(e){}if(was)v.play().catch(()=>{})},{once:true})}}}
  else{w.classList.remove('hide');if(st==='queued'||st==='working')w.innerHTML='<strong>Gerando a prévia…</strong><span class="muted small">Leva alguns segundos. Ela aparece aqui sozinha. Você já pode editar: legendas e títulos aparecem ao vivo.</span>';

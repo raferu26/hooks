@@ -56,3 +56,9 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 - **TESTE:** `tests/test_design_tokens.py` (4) + `test_interface`; e2e completo sem falhas; layout inalterado (±1 px).
 - **RESULTADO:** tamanhos de fonte **6 → 4**; textos < 12 px **17 → 0**; alvos < 28 px **18 → 0**; contraste AA segue 0 falhas (medição exclui blocos da timeline e o vídeo).
 - **Não feito/validado:** contraste dos blocos da timeline; espaçamento em grade de 4 px; áreas de 40 px para toque; revisão visual por pessoas.
+
+## [Etapas do corte: Importar → Editar → Conferir → Exportar] — 24/11/2026 (P07)
+- **ANTES:** a barra do Estúdio só mostrava "1 de N"; nenhuma indicação de em que ponto do fluxo o usuário estava nem do que fazer em seguida.
+- **ALTERAÇÃO** (`ui/studio.js`, `body.html`, `style.css`): indicador de 4 etapas **derivado do estado real**: *Exportar/Exportando…/Exportado* quando o corte foi aprovado; *Editar* com alterações não salvas, salvando ou prévia desatualizada; *Conferir* com tudo salvo e prévia atual. Dicas ao passar o mouse; `aria-current="step"`; oculto abaixo de 1180 px (como "1 de N").
+- **TESTE:** e2e `etapa_editar_ao_alterar` e `etapa_conferir_com_previa_pronta`; e2e completo sem falhas; barra continua em 1 linha (47,8 px) a 1440/1280/1024; `test_interface`, `test_design_tokens`, `test_http` OK.
+- **Não feito:** as etapas são informativas (não clicáveis); o fluxo "Importar" fora do Estúdio (tela Adicionar) não foi redesenhado; sem teste com pessoas.

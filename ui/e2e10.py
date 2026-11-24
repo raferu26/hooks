@@ -75,6 +75,7 @@ with sync_playwright() as p:
     heads2 = pg.evaluate("[...document.querySelectorAll('#tlHeads div')].map(x=>x.textContent).filter(Boolean)")
     check('pista_zoom_aparece', 'Zoom' in heads2, heads2)
     check('inspetor_mostra_zoom', pg.evaluate("document.querySelector('#stRight .insp-item b').textContent==='Zoom'"))
+    check('etapa_editar_ao_alterar', pg.evaluate("document.querySelector('#stSteps li.now').textContent.trim()==='Editar'"))
     check('estado_nao_salvo', 'não salvas' in pg.evaluate("document.getElementById('stState').textContent"))
     # autosave: em até 4 s fica Salvo, desfazer continua disponível
     wait(pg, "document.getElementById('stState').textContent==='Salvo'", 8000)
@@ -91,6 +92,7 @@ with sync_playwright() as p:
         if pg.evaluate("ST.data.preview.ready&&!ST.dirty"): break
         pg.wait_for_timeout(1000)
     check('previa_nova_pronta_sozinha', pg.evaluate("ST.data.preview.ready"))
+    check('etapa_conferir_com_previa_pronta', pg.evaluate("document.querySelector('#stSteps li.now').textContent.trim()==='Conferir'&&document.querySelectorAll('#stSteps li.done').length===2"))
     res['segundos_ate_previa_nova'] = i + 1
     # desfazer volta o zoom
     pg.keyboard.press('Control+z'); pg.wait_for_timeout(150)
