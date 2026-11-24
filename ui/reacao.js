@@ -17,6 +17,8 @@ const RX_DIAG={
  cinema:'<i style="top:0;height:28%;left:0;right:0;background:#35d0ba"></i><i style="top:28%;bottom:0;left:0;right:0;background:#1b2a40"></i><i style="top:42%;height:34%;left:0;right:0;background:#4f7aa8"></i>'};
 const RX_SPLIT={cam_compacta:'Altura da webcam',cam_ampliada:'Altura da webcam',cam_embaixo:'Altura do conteúdo',cinema:'Altura da webcam',duas_cams:'Altura das webcams',dueto:'Largura da pessoa 1'};
 const RX_FITS=[['fill','Preencher','Ocupa a área toda, cortando o que passar. Sem distorcer.'],['fit','Mostrar inteiro','Mostra a região toda; pode sobrar fundo.'],['custom','Personalizado','Preenche com zoom e foco ajustáveis.']];
+const rxColor=r=>String(r).startsWith('mask:')?'#ff6b6b':RX_COLORS[r];
+const rxRoleName=r=>String(r).startsWith('mask:')?'Área a ocultar':RX_ROLE[r];
 const rxCat=()=>ST.data.catalog.composition;
 const rxLayout=id=>rxCat().layouts.find(l=>l.id===id);
 const rxComp=()=>ST.proj&&ST.proj.composition;
@@ -56,6 +58,7 @@ function reacaoHtml(d,P){const cat=rxCat(),c=P.composition,main=cat.layouts.filt
  if(lay.roles.includes('conteudo'))h+=rxFitBlock(c,p,'content','Conteúdo');
  h+=`<div class="fld"><label>Fundo (onde sobra espaço)</label><select data-rxf="bg" data-t="str">${[['black','Preto'],['color','Cor sólida'],['blur','Desfocado (do próprio vídeo)']].map(([k,t])=>`<option value="${k}" ${p.bg===k?'selected':''}>${t}</option>`).join('')}</select></div>`;
  if(p.bg==='color')h+=`<div class="fld"><label>Cor do fundo</label><input type="color" data-rxf="bg_color" data-t="str" value="${p.bg_color}"></div>`;
+ h+=rxMasksHtml(c);
  h+=rxScenesHtml(c);
  h+=rxApplyHtml();
  return h+`<p class="help">A prévia acima usa um quadro do vídeo e as mesmas regras da exportação. A prévia em vídeo (P) mostra o resultado real.</p>`+rxRemove()}
@@ -71,6 +74,10 @@ function rxApplyHtml(){const me=state.candidates.find(x=>x.id===ST.id);if(!me)re
  return h}
 async function rxLoadPresets(){try{RX.presets=(await api('/api/composition/presets',{action:'list',id:ST.id})).presets;drawRight()}catch(e){RX.presets=[]}}
 async function rxPresetCall(body){try{RX.presets=(await api('/api/composition/presets',Object.assign({id:ST.id},body))).presets;drawRight();return true}catch(e){toast(e.message,true);return false}}
+function rxMasksHtml(c){const ms=c.masks||[];
+ let h=`<h4 aria-level="3">Ocultar parte do vídeo</h4><p class="help">Esconda à mão algo que não deve aparecer (por exemplo, outra webcam dentro do conteúdo). Nada é detectado sozinho e dá para desfazer.</p><div class="row"><button class="small" data-rx="mask-add" ${ms.length>=6?'disabled':''}>＋ Ocultar uma região</button></div>`;
+ if(ms.length)h+=`<div class="list">${ms.map((m,i)=>`<div class="item"><div class="row"><b class="grow">Área ${i+1}</b><select data-rxm="${m.id}:kind" aria-label="Como ocultar"><option value="blur" ${m.kind==='blur'?'selected':''}>Desfocar</option><option value="cover" ${m.kind==='cover'?'selected':''}>Cobrir com cor</option></select>${m.kind==='cover'?`<input type="color" data-rxm="${m.id}:color" value="${m.color}" aria-label="Cor">`:''}</div><div class="row"><button class="small" data-rx="mask-edit:${m.id}">Refazer</button><button class="small quiet danger" data-rx="mask-del:${m.id}">Remover</button></div></div>`).join('')}</div><p class="help">Confira na prévia o que foi escondido: informações importantes do conteúdo também somem.</p>`;
+ return h}
 const RX_FADES=[[0,'Corte direto'],[.3,'Suave (0,3 s)'],[.6,'Suave (0,6 s)']];
 function rxSceneEditor(o,i){const c=rxComp(),L=rxCat().layouts,base=`composition.scenes.${i}`;
  const miss=rxMissing({layout:o.layout,regions:c.regions});
@@ -115,31 +122,36 @@ async function rxPaint(){const c=rxComp(),cv=$('rxCanvas');if(!c||!cv||!rxReady(
   if(id!==RX.busy||!$('rxCanvas'))return;RX.plan=r.plan;RX.planKey=JSON.stringify(c)+'|'+(RX.t??'');rxDraw($('rxCanvas'),r.plan,img);
   const w=$('rxWarn');if(w)w.innerHTML=r.plan.warnings.map(x=>`<div>⚠ ${esc(x)}</div>`).join('')}
  catch(e){const w=$('rxWarn');if(w)w.textContent=e.message}}
-function rxDraw(cv,plan,img){const g=cv.getContext('2d'),s=cv.width/plan.canvas[0],k=img.naturalWidth/plan.source[0];
+function rxMasked(plan,img){if(!(plan.masks||[]).length)return img;const k=img.naturalWidth/plan.source[0],o=document.createElement('canvas');o.width=img.naturalWidth;o.height=img.naturalHeight;const g=o.getContext('2d');g.drawImage(img,0,0);
+ for(const m of plan.masks){const [x,y,w,h]=m.rect.map(v=>v*k);if(m.kind==='cover'){g.fillStyle=m.color;g.fillRect(x,y,w,h)}else{g.save();g.beginPath();g.rect(x,y,w,h);g.clip();try{g.filter='blur('+Math.max(2,Math.min(w,h)/4)+'px)'}catch(e){}g.drawImage(img,0,0);g.restore()}}
+ return o}
+function rxDraw(cv,plan,img0){const img=rxMasked(plan,img0),g=cv.getContext('2d'),s=cv.width/plan.canvas[0],k=(img.naturalWidth||img.width)/plan.source[0];
  g.clearRect(0,0,cv.width,cv.height);
- if(plan.bg.kind==='blur'){g.save();try{g.filter='blur(5px)'}catch(e){}const sc=Math.max(cv.width/img.naturalWidth,cv.height/img.naturalHeight);g.drawImage(img,(cv.width-img.naturalWidth*sc)/2,(cv.height-img.naturalHeight*sc)/2,img.naturalWidth*sc,img.naturalHeight*sc);g.restore()}
+ if(plan.bg.kind==='blur'){g.save();try{g.filter='blur(5px)'}catch(e){}const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height,sc=Math.max(cv.width/iw,cv.height/ih);g.drawImage(img,(cv.width-iw*sc)/2,(cv.height-ih*sc)/2,iw*sc,ih*sc);g.restore()}
  else{g.fillStyle=plan.bg.kind==='color'?plan.bg.color:'#000';g.fillRect(0,0,cv.width,cv.height)}
  for(const L of plan.layers){const [cx,cy,cw,ch]=L.crop,[px,py]=L.pos,[w,h]=L.size;g.drawImage(img,cx*k,cy*k,cw*k,ch*k,px*s,py*s,w*s,h*s);
   if(L.border){g.strokeStyle=L.border_color;g.lineWidth=Math.max(1,L.border*s);g.strokeRect(px*s+g.lineWidth/2,py*s+g.lineWidth/2,w*s-g.lineWidth,h*s-g.lineWidth)}}}
 
 /* ───────── seletor de regiões no quadro original ───────── */
 function rxOpenPicker(role,frameT){const c=rxComp();if(!c)return;
- const start=c.regions[role]?{...c.regions[role]}:null;
+ const mk=String(role).startsWith('mask:')?(c.masks||[]).find(m=>m.id===role.slice(5)):null;
+ const start=mk?{...mk.region}:c.regions[role]?{...c.regions[role]}:null;
  RX.picker={role,rect:start,orig:start,undo:[],t:frameT??RX.t??Math.min(dur()*.5,Math.max(0,ST.cursor||0)),drag:null};
  rxRenderPicker()}
 function rxClosePicker(){RX.picker=null;const m=$('rxModal');if(m)m.remove();document.removeEventListener('keydown',rxKey,true)}
 function rxRenderPicker(){const P=RX.picker;if(!P)return;let m=$('rxModal');
  if(!m){m=document.createElement('div');m.id='rxModal';m.className='rx-modal';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');document.body.appendChild(m);document.addEventListener('keydown',rxKey,true)}
- const c=rxComp(),roles=rxLayout(c.layout).roles,idx=roles.indexOf(P.role)+1;
- m.innerHTML=`<div class="rx-card"><div class="row"><b class="grow">Selecionar ${RX_ROLE[P.role]} <span class="muted small">(${idx} de ${roles.length})</span></b><button class="small quiet" data-rxp="cancel" aria-label="Cancelar">✕</button></div>
-  <p class="help">${P.role==='conteudo'?'Arraste sobre a parte do vídeo que mostra o conteúdo reagido.':'Arraste sobre o rosto/câmera da pessoa. Pode mover e redimensionar depois.'} Este é o vídeo ORIGINAL, sem o corte vertical.</p>
+ const c=rxComp(),roles=rxLayout(c.layout).roles,idx=roles.indexOf(P.role)+1,isMask=String(P.role).startsWith('mask:');
+ m.innerHTML=`<div class="rx-card"><div class="row"><b class="grow">${isMask?'Selecionar a área a ocultar':'Selecionar '+RX_ROLE[P.role]} ${isMask?'':`<span class="muted small">(${idx} de ${roles.length})</span>`}</b><button class="small quiet" data-rxp="cancel" aria-label="Cancelar">✕</button></div>
+  <p class="help">${isMask?'Arraste sobre o que deve ficar escondido (por exemplo, uma webcam que aparece dentro do conteúdo). Vale para todo o clipe e acontece antes do recorte.':P.role==='conteudo'?'Arraste sobre a parte do vídeo que mostra o conteúdo reagido.':'Arraste sobre o rosto/câmera da pessoa. Pode mover e redimensionar depois.'} Este é o vídeo ORIGINAL, sem o corte vertical.</p>
   <div class="rx-stage" id="rxStage"><img id="rxImg" alt="Quadro do vídeo original" draggable="false"><div id="rxLayer"></div><div class="rx-loading" id="rxLoad">Carregando o quadro…</div></div>
   <div class="fld"><label>Quadro do vídeo: <span id="rxTt">${P.t.toFixed(1)}</span> s</label><input type="range" id="rxT" min="0" max="${Math.max(.1,dur()).toFixed(2)}" step=".1" value="${P.t}"></div>
   <div class="row"><button class="small" data-rxp="reset">Redefinir</button><button class="small" data-rxp="undo">Desfazer</button><span class="grow"></span><button class="small" data-rxp="cancel">Cancelar</button><button class="small primary" data-rxp="ok" id="rxOk">Confirmar</button></div></div>`;
  const img=$('rxImg');img.onload=()=>{$('rxLoad').classList.add('hide');rxPaintRects()};img.onerror=()=>{$('rxLoad').textContent='Não consegui carregar o quadro do vídeo original (o arquivo ainda existe?).'};img.src=rxFrameUrl(P.t)}
 function rxPaintRects(){const P=RX.picker,layer=$('rxLayer');if(!P||!layer)return;const c=rxComp();let h='';
  for(const [role,r] of Object.entries(c.regions)){if(role===P.role)continue;h+=`<div class="rx-rect other" style="${rxStyle(r)};border-color:${RX_COLORS[role]}"><span style="background:${RX_COLORS[role]}">${RX_ROLE[role]}</span></div>`}
- if(P.rect){h+=`<div class="rx-rect cur" style="${rxStyle(P.rect)};border-color:${RX_COLORS[P.role]}"><span style="background:${RX_COLORS[P.role]}">${RX_ROLE[P.role]}</span>${['nw','ne','sw','se'].map(k=>`<i class="rx-h ${k}" data-h="${k}"></i>`).join('')}</div>`}
+ for(const m of (c.masks||[])){if('mask:'+m.id===P.role)continue;h+=`<div class="rx-rect other" style="${rxStyle(m.region)};border-color:#ff6b6b"><span style="background:#ff6b6b">Oculta</span></div>`}
+ if(P.rect){h+=`<div class="rx-rect cur" style="${rxStyle(P.rect)};border-color:${rxColor(P.role)}"><span style="background:${rxColor(P.role)}">${rxRoleName(P.role)}</span>${['nw','ne','sw','se'].map(k=>`<i class="rx-h ${k}" data-h="${k}"></i>`).join('')}</div>`}
  layer.innerHTML=h;const ok=$('rxOk');if(ok)ok.disabled=!P.rect}
 const rxStyle=r=>`left:${r.x*100}%;top:${r.y*100}%;width:${r.w*100}%;height:${r.h*100}%`;
 function rxPoint(e){const b=$('rxImg').getBoundingClientRect();return{x:Math.min(1,Math.max(0,(e.clientX-b.left)/b.width)),y:Math.min(1,Math.max(0,(e.clientY-b.top)/b.height))}}
@@ -165,6 +177,7 @@ function rxUndoRect(){const P=RX.picker;if(!P||!P.undo.length)return;P.rect=P.un
 function rxConfirm(){const P=RX.picker;if(!P||!P.rect)return toast('Desenhe um retângulo sobre a região.',true);
  const r={x:+P.rect.x.toFixed(5),y:+P.rect.y.toFixed(5),w:+P.rect.w.toFixed(5),h:+P.rect.h.toFixed(5)};if(r.w<.02||r.h<.02)return toast('Região pequena demais. Desenhe um retângulo maior.',true);
  const role=P.role;RX.t=P.t;rxClosePicker();
+ if(String(role).startsWith('mask:')){const id=role.slice(5);mutate(()=>{const c=ST.proj.composition;c.masks=c.masks||[];const m=c.masks.find(z=>z.id===id);if(m)m.region=r;else c.masks.push({id,kind:'blur',color:'#000000',region:r})});return}
  mutate(()=>{ST.proj.composition.regions[role]=r});
  const next=rxMissing(rxComp())[0];if(next)setTimeout(()=>rxOpenPicker(next),50)}
 document.addEventListener('pointerdown',e=>{if(RX.picker)rxDown(e)},true);
@@ -180,18 +193,21 @@ document.addEventListener('change',e=>{if(e.target.id==='rxT'&&RX.picker){$('rxL
 function rxSetParam(key,v){mutate(()=>{const c=ST.proj.composition;c.params=c.params||{};c.params[key]=v})}
 $('stRight').addEventListener('click',e=>{const t=e.target;
  const dl=t.closest('[data-del^="scene:"]');if(dl){e.stopImmediatePropagation();const id=dl.dataset.del.slice(6);mutate(()=>{const c=ST.proj.composition;if(c)c.scenes=(c.scenes||[]).filter(z=>z.id!==id);ST.item=null});return}
- const l=t.closest('[data-rxl]');if(l){const id=l.dataset.rxl;mutate(()=>{const old=ST.proj.composition;ST.proj.composition={version:1,layout:id,regions:old?old.regions:{},params:{}}});const next=rxMissing(rxComp())[0];if(next)setTimeout(()=>rxOpenPicker(next),50);return}
+ const l=t.closest('[data-rxl]');if(l){const id=l.dataset.rxl;mutate(()=>{const old=ST.proj.composition;ST.proj.composition=Object.assign({version:1,layout:id,regions:old?old.regions:{},params:{}},old&&old.masks?{masks:old.masks}:{},old&&old.scenes?{scenes:old.scenes}:{})});const next=rxMissing(rxComp())[0];if(next)setTimeout(()=>rxOpenPicker(next),50);return}
  const a=t.closest('[data-rx]');if(a){const k=a.dataset.rx;
   if(k==='more'){RX.more=!RX.more;drawRight()}
   else if(k==='remove')mutate(()=>{ST.proj.composition=null});
   else if(k.startsWith('pick:'))rxOpenPicker(k.slice(5))
   else if(k==='preset-apply'){const p=(RX.presets||[]).find(x=>x.id===RX.presetSel);if(!p)return;
-   mutate(()=>{const old=ST.proj.composition,keep=p.has_regions&&p.compatible?p.regions:(old?old.regions:{});ST.proj.composition={version:1,layout:p.layout,regions:keep||{},params:Object.assign({},p.params)}});
+   mutate(()=>{const old=ST.proj.composition,keep=p.has_regions&&p.compatible?p.regions:(old?old.regions:{});ST.proj.composition=Object.assign({version:1,layout:p.layout,regions:keep||{},params:Object.assign({},p.params)},old&&old.masks?{masks:old.masks}:{},old&&old.scenes?{scenes:old.scenes}:{})});
    if(p.has_regions&&!p.compatible)toast('Este layout foi salvo com regiões de um vídeo de outra proporção: só o modelo e os ajustes foram aplicados. Marque as regiões.',false);
    const next=rxMissing(rxComp())[0];if(next)setTimeout(()=>rxOpenPicker(next),50)}
   else if(k==='suggest'){RX.suggesting=true;drawRight();(async()=>{try{if(ST.dirty)await persist({learn:false,preview:false,force:true});RX.sug=await api('/api/composition/suggest',{id:ST.id,composition:ST.proj.composition})}catch(e){toast(e.message,true)}RX.suggesting=false;drawRight()})()}
   else if(k.startsWith('sug-ok:')){const [,a,b]=k.split(':');RX.ignored[a+'-'+b]=true;rxAddScene(+a,+b)}
   else if(k.startsWith('sug-no:')){const [,a,b]=k.split(':');RX.ignored[a+'-'+b]=true;drawRight()}
+  else if(k==='mask-add')rxOpenPicker('mask:'+uidc('m'))
+  else if(k.startsWith('mask-edit:'))rxOpenPicker('mask:'+k.slice(10))
+  else if(k.startsWith('mask-del:')){const id=k.slice(9);mutate(()=>{const c=ST.proj.composition;c.masks=(c.masks||[]).filter(m=>m.id!==id)})}
   else if(k==='scene-add')rxNewScene(rxPickSceneLayout(),{})
   else if(k==='scene-paste'&&RX.sceneClip)rxNewScene(RX.sceneClip.layout,RX.sceneClip.params)
   else if(k.startsWith('scene-copy:')){const o=getItem({kind:'scene',id:k.slice(11)});if(o){RX.sceneClip={layout:o.layout,params:Object.assign({},o.params)};toast('Cena copiada. Selecione outro trecho e use “Colar na seleção”.');drawRight()}}
@@ -208,6 +224,7 @@ $('stRight').addEventListener('click',e=>{const t=e.target;
 $('stRight').addEventListener('change',e=>{const t=e.target;
  if(t.id==='rxPreset'){RX.presetSel=t.value;e.stopImmediatePropagation();drawRight();return}
  if(t.dataset.f&&/^composition\.scenes\.\d+\.layout$/.test(t.dataset.f)){e.stopImmediatePropagation();const i=+t.dataset.f.split('.')[2],v=t.value;mutate(()=>{const o=ST.proj.composition.scenes[i];o.layout=v;o.params={}});return}
+ if(t.dataset.rxm){e.stopImmediatePropagation();const [id,f]=t.dataset.rxm.split(':');mutate(()=>{const m=(ST.proj.composition.masks||[]).find(z=>z.id===id);if(m)m[f]=t.value});return}
  if(t.dataset.rxa!==undefined){RX.applyPick[t.dataset.rxa]=t.checked;e.stopImmediatePropagation();return}
  const k=t.dataset.rxf;if(!k)return;e.stopImmediatePropagation();
  let v=t.type==='checkbox'?t.checked:t.value;if(t.dataset.t==='num')v=+v;if(k==='gap'||k==='pip_border')v=Math.round(v);

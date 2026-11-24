@@ -19,6 +19,8 @@ FITS = ('fit', 'fill', 'custom')
 BG_KINDS = ('black', 'color', 'blur')
 CORNERS = ('tl', 'tr', 'bl', 'br', 'free')
 SCENE_LIMIT = 24
+MASK_LIMIT = 6
+MASK_KINDS = ('blur', 'cover')
 SCENE_MIN = .4              # segundos
 FADE_MAX = 1.0              # transição suave: no máximo 1 s
 MIN_REGION = .02            # fração mínima do quadro (2%) para uma região ser considerada marcada
@@ -162,6 +164,25 @@ def clean(raw, duration=None):
     scenes = clean_scenes(raw.get('scenes'), duration)
     if scenes:
         out['scenes'] = scenes
+    masks = clean_masks(raw.get('masks'))
+    if masks:
+        out['masks'] = masks
+    return out
+
+
+def clean_masks(raw):
+    """Áreas da FONTE ocultadas à mão (desfocar ou cobrir com cor), por exemplo uma webcam embutida no conteúdo. Valem para todas as
+    cenas e acontecem antes de qualquer recorte; nada é detectado nem reconstruído automaticamente."""
+    if not raw:
+        return []
+    if not isinstance(raw, list) or len(raw) > MASK_LIMIT:
+        raise ValueError(f'Use no máximo {MASK_LIMIT} áreas ocultas.')
+    out = []
+    for index, item in enumerate(raw):
+        if not isinstance(item, dict) or item.get('kind', 'blur') not in MASK_KINDS:
+            raise ValueError('Área oculta inválida (use blur ou cover).')
+        out.append(dict(id=str(item.get('id') or f'm{index}')[:40], kind=item.get('kind', 'blur'), region=clean_region(item.get('region'), 'conteudo'),
+                        color=_hex(item.get('color'), '#000000')))
     return out
 
 
@@ -293,6 +314,7 @@ def resolve(comp, SW, SH, canvas=CANVAS):
                bg=dict(kind=params['bg'], color=params['bg_color']), source=[SW, SH])
     if missing:
         return out
+    out['masks'] = mask_rects(comp, SW, SH)
     boxes = _boxes(layout, params, W, H)
     fitkey = dict(webcam='cam', webcam2='cam2', conteudo='content')
     layers = []
@@ -334,6 +356,39 @@ def resolve(comp, SW, SH, canvas=CANVAS):
 
 # ───────────── filtergraph ─────────────
 
+def mask_rects(comp, SW, SH):
+    """Áreas ocultas em pixels da fonte (pares, dentro do quadro): [{id, kind, color, rect:[x,y,w,h]}]."""
+    out = []
+    for mask in comp.get('masks') or []:
+        r = mask['region']
+        w = max(2, min(SW, int(round(r['w'] * SW)) // 2 * 2))
+        h = max(2, min(SH, int(round(r['h'] * SH)) // 2 * 2))
+        x = max(0, min(SW - w, int(round(r['x'] * SW)) // 2 * 2))
+        y = max(0, min(SH - h, int(round(r['y'] * SH)) // 2 * 2))
+        out.append(dict(id=mask['id'], kind=mask['kind'], color=mask['color'], rect=[x, y, w, h]))
+    return out
+
+
+def _mask_filters(masks, source, out):
+    """Aplica as áreas ocultas ao quadro da fonte: cobrir = drawbox; desfocar = recorte desfocado sobreposto."""
+    if not masks:
+        return [f'[{source}]null[{out}]']
+    parts, current = [], source
+    for i, m in enumerate(masks):
+        x, y, w, h = m['rect']
+        last = i == len(masks) - 1
+        label = out if last else f'mk{i}'
+        if m['kind'] == 'cover':
+            parts.append(f'[{current}]drawbox=x={x}:y={y}:w={w}:h={h}:color={_color(m["color"])}:t=fill[{label}]')
+        else:
+            radius = max(2, min(w, h) // 4)
+            parts.append(f'[{current}]split=2[mka{i}][mkb{i}]')
+            parts.append(f'[mkb{i}]crop={w}:{h}:{x}:{y},boxblur=luma_radius={radius}:luma_power=3:chroma_radius={max(1, radius // 2)}:chroma_power=3[mkc{i}]')
+            parts.append(f'[mka{i}][mkc{i}]overlay={x}:{y}[{label}]')
+        current = label
+    return parts
+
+
 def _color(value):
     return '0x' + HEX.match(value).group(1).upper()
 
@@ -371,11 +426,13 @@ def _composite(plan, canvas, source, out, tag, draft=False):
     return parts
 
 
-def _head(source, fps, sar, label):
+def _head(source, fps, sar, label, masks=()):
     chain = f'[{source}]fps={fps},'
     if abs(sar - 1) > 1e-3:
         chain += f'scale=trunc(iw*{sar:.6f}/2)*2:ih:flags=lanczos,'
-    return chain + f'setsar=1[{label}]'
+    if not masks:
+        return chain + f'setsar=1[{label}]'
+    return ';'.join([chain + 'setsar=1[hm0]'] + _mask_filters(masks, 'hm0', label))
 
 
 def variants(comp):
@@ -457,7 +514,7 @@ def video_graph(comp, SW, SH, source='0:v', fps=30, canvas=CANVAS, sar=1.0, out=
     if not plan['ready']:
         raise ValueError('A composição de reação está incompleta: marque ' + ' e '.join(ROLE_LABELS[r] for r in plan['missing']) + '.')
     if not segs or all(seg['variant'] == 'base' for seg in segs):
-        return ';'.join([_head(source, fps, sar, 'h')] + _composite(plan, canvas, 'h', out, '', draft))
+        return ';'.join([_head(source, fps, sar, 'h', plan['masks'])] + _composite(plan, canvas, 'h', out, '', draft))
     plans = {key: resolve(value, SW, SH, canvas) for key, value in variants(comp).items()}
     uses = []                                                     # (variante, início, fim|None) em quadros
     pieces = []                                                   # como juntar: ('plain', i) ou ('blend', i, j)
@@ -475,7 +532,7 @@ def video_graph(comp, SW, SH, source='0:v', fps=30, canvas=CANVAS, sar=1.0, out=
         else:
             uses.append((seg['variant'], a, end))
             pieces.append(('plain', len(uses) - 1))
-    parts = [_head(source, fps, sar, 'h')]
+    parts = [_head(source, fps, sar, 'h', plan['masks'])]
     parts.append('[h]split=%d' % len(uses) + ''.join(f'[u{i}]' for i in range(len(uses))))
     for i, (variant, a, b) in enumerate(uses):
         window = f'start_frame={a}' + (f':end_frame={b}' if b is not None else '')

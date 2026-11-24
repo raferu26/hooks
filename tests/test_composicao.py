@@ -261,6 +261,64 @@ class Pixels(unittest.TestCase):
             C.video_graph(comp, SW, SH)
 
 
+class Masks(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        Pixels.setUpClass.__func__(cls)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.temp.cleanup()
+
+    def out_point(self, plan, role, sx, sy):
+        layer = next(l for l in plan['layers'] if l['role'] == role)
+        cx, cy, cw, ch = layer['crop']
+        return int(layer['pos'][0] + (sx - cx) / cw * layer['size'][0]), int(layer['pos'][1] + (sy - cy) / ch * layer['size'][1])
+
+    def test_validation(self):
+        for bad in ('x', [dict(kind='x', region=dict(x=.1, y=.1, w=.2, h=.2))], [dict(kind='blur', region=dict(x=.1, y=.1, w=.001, h=.2))],
+                    [dict(kind='cover', region=dict(x=.1, y=.1, w=.2, h=.2))] * 7):
+            with self.assertRaises(ValueError, msg=str(bad)):
+                C.clean(dict(layout='cam_ampliada', masks=bad))
+        ok = C.clean(dict(layout='cam_ampliada', masks=[dict(kind='cover', region=dict(x=.1, y=.1, w=.2, h=.2), color='#FF0000')]))
+        self.assertEqual(ok['masks'][0]['color'], '#FF0000')
+
+    def test_cover_paints_the_marked_source_area_in_the_output(self):
+        # bloco de fonte (x 480..600, y 360..480) fica dentro do recorte do conteúdo; cobre com verde
+        mask = dict(kind='cover', color='#00FF00', region=dict(x=470 / SW, y=350 / SH, w=140 / SW, h=140 / SH))
+        comp = C.clean(dict(layout='cam_ampliada', regions=regions_for('cam_ampliada'), masks=[mask]))
+        out = render_frame(self.source, C.video_graph(comp, SW, SH))
+        plan = C.resolve(comp, SW, SH)
+        x, y = self.out_point(plan, 'conteudo', 540, 420)
+        self.assertGreater(out[y, x, 1], 220)
+        self.assertLess(out[y, x, 0], 60)
+        # fora da área coberta o conteúdo continua igual ao da fonte
+        ox, oy = self.out_point(plan, 'conteudo', 180, 180)
+        expected = source_color(self.frame, 180, 180)
+        if expected is not None:
+            self.assertLessEqual(int(np.abs(out[oy, ox] - expected).max()), 14)
+
+    def test_blur_removes_detail_only_inside_the_area(self):
+        comp0 = C.clean(dict(layout='cam_ampliada', regions=regions_for('cam_ampliada')))
+        mask = dict(kind='blur', region=dict(x=480 / SW, y=240 / SH, w=240 / SW, h=360 / SH))
+        comp1 = C.clean(dict(layout='cam_ampliada', regions=regions_for('cam_ampliada'), masks=[mask]))
+        a, b = (render_frame(self.source, C.video_graph(c, SW, SH)) for c in (comp0, comp1))
+        plan = C.resolve(comp1, SW, SH)
+        x0, y0 = self.out_point(plan, 'conteudo', 480, 240)
+        x1, y1 = self.out_point(plan, 'conteudo', 720, 600)
+        inside = np.abs(a[y0:y1, x0:x1] - b[y0:y1, x0:x1]).mean()
+        top = np.abs(a[:C._even(1920 * comp1['params']['split'])] - b[:C._even(1920 * comp1['params']['split'])]).mean()
+        self.assertGreater(inside, 4)
+        self.assertLess(top, 2)                                   # a webcam (fora da área) não muda (resta só arredondamento de cor do overlay)
+
+    def test_masks_apply_to_every_scene(self):
+        mask = dict(kind='cover', color='#00FF00', region=dict(x=0, y=0, w=.5, h=.5))
+        comp = C.clean(dict(layout='cam_ampliada', regions=regions_for('cam_ampliada'), masks=[mask],
+                            scenes=[dict(id='a', start=1, end=2, layout='cinema')]), 3)
+        graph = C.video_graph(comp, SW, SH, fps=10, segs=C.segments(comp, [(0, 1, 0, 1), (1, 2, 1, 2), (2, 3, 2, 3)], 3, 10))
+        self.assertEqual(graph.count('drawbox=x=0:y=0:w=960:h=540:color=0x00FF00'), 1)   # aplicado uma vez, antes da divisão em cenas
+
+
 class LiveWebcamWhileContentIsStill(unittest.TestCase):
     """Requisito central: conteúdo parado + webcam em movimento → a webcam continua se mexendo na saída."""
 
