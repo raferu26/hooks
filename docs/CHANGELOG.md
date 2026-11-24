@@ -114,3 +114,8 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 ## [Fidelidade prévia × exportação final — medição] — 24/11/2026
 - **Medição** (corte de 28 s, vídeo sintético, modo Equilibrado, CPU): SSIM do final (1080×1920 reduzido a 540×960) contra o **rascunho novo** = **0,9759**; contra o **rascunho antigo** (mesmo trecho, filtros de 0.19) = **0,9757**. A otimização do rascunho **não** reduziu a fidelidade ao arquivo final (diferença 0,0002). Tempos: prévia 6,5 s; exportação 35,1 s.
 - **Limites:** fonte sintética; legenda/título do final não aparecem no rascunho (a prévia usa legenda ao vivo em HTML — comparação lado a lado com libass segue pendente, V04); GPU não testada.
+
+## [Comparativo A/B de áudio para ouvir] — 24/11/2026 (branch `feature/ab-audio`)
+- **O que é:** `validacao/ab_audio.py` — original × preset desligado × natural (± limpeza) pela cadeia real do app, com volume igualado (−16 LUFS ±0,3), página `ouvir.html` com modo cego e `metricas.json`. Nada muda no produto.
+- **TESTE:** `tests/test_ab_audio.py` (fluxo com 3 amostras sintéticas: volumes iguais, pico ≤ −0,8 dBTP, 9 players, modo cego). Demo: preset natural reduziu a variação de volume (σ 1,7→1,2 dB; 1,56→1,11; 1,11→0,51) mas elevou o piso de ruído ≈2,4 dB sem limpeza.
+- **Pendente:** amostras reais do Rafael (voz limpa, voz com ruído, gameplay com música e efeitos) e a decisão sobre o padrão de perfis novos.

@@ -35,3 +35,12 @@ Achado: o padrão (`voice_preset='off'`) deixa VOL σ ≈ 2,8 dB; o preset **nat
 
 ## 4. Pendências
 Fala real (limpeza, ducking, preset); ruído não estacionário; `anlmdn` no modo Entrega; EQ/de-esser avaliados só quanto a níveis; Windows/FFmpeg do instalador (a presença de `afwtdn` depende da versão do FFmpeg do cliente — há fallback).
+
+## 5. Comparativo A/B para ouvir (`validacao/ab_audio.py`)
+Para decidir se o preset `natural` vira padrão **com áudio real**:
+```bash
+python3 validacao/ab_audio.py voz_limpa.wav voz_com_ruido.wav gameplay.mp4 --saida ab_saida --segundos 60 --limpeza
+```
+Gera, por amostra, `1_original`, `2_preset_desligado`, `3_preset_natural` (e com `--limpeza` também `4_desligado_com_limpeza`, `5_natural_com_limpeza`), **todas no mesmo volume (−16 LUFS)**, mais `ouvir.html` (players com **modo cego** sorteado e campo de notas) e `metricas.json` (LUFS, pico, LRA, consistência σ, piso de ruído, % de clip). Use cópias dos arquivos; os originais não são tocados. `--demo` gera 3 amostras sintéticas só para conferir o fluxo.
+**Achado já visível no demo sintético:** com ruído de fundo, o preset `natural` **sem** limpeza sobe o piso de ruído (≈ +2,4 dB: −35,9 → −33,4 dBFS) porque o compressor tem ganho de compensação; com a limpeza ligada o piso cai (−48 dBFS). Ouça esse caso com atenção.
+O que avaliar de ouvido: clareza · artefatos (som "debaixo d'água", chiado, bombeamento da música) · preservação da voz · consistência de volume.
