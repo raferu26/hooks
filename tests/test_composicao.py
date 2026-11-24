@@ -261,6 +261,67 @@ class Pixels(unittest.TestCase):
             C.video_graph(comp, SW, SH)
 
 
+def frame_rgb(path, vf='null', size=(SW, SH)):
+    out = subprocess.run([media.tool('ffmpeg'), '-nostdin', '-loglevel', 'error', '-i', str(path), '-frames:v', '1', '-vf', vf + ',format=rgb24',
+                          '-f', 'rawvideo', '-'], capture_output=True, check=True).stdout
+    return np.frombuffer(out, np.uint8).reshape(size[1], size[0], 3).astype(int)
+
+
+class RotationAndAnamorphic(unittest.TestCase):
+    """As regiões são frações do quadro que o espectador VÊ (rotação e proporção de pixel aplicadas)."""
+
+    def check_against_truth(self, source, truth, expect_dims):
+        info = media.probe(source)
+        self.assertEqual((info['display_width'], info['display_height']), expect_dims)
+        comp = C.clean(dict(layout='cam_ampliada', regions=regions_for('cam_ampliada')))
+        graph = C.video_graph(comp, info['display_width'], info['display_height'], fps=10, sar=info['sar'] if info['sar'] != 1 else 1.0)
+        out = render_frame(source, graph)
+        plan = C.resolve(comp, *expect_dims)
+        checked = 0
+        for layer in plan['layers']:
+            cx, cy, cw, ch = layer['crop']
+            for u in (.2, .5, .8):
+                for v in (.2, .5, .8):
+                    expected = source_color(truth, cx + u * cw, cy + v * ch)
+                    if expected is None:
+                        continue
+                    got = out[int(layer['pos'][1] + v * layer['size'][1]), int(layer['pos'][0] + u * layer['size'][0])]
+                    self.assertLessEqual(int(np.abs(got - expected).max()), 16, f'{layer["role"]} ({u},{v}) {got} != {expected}')
+                    checked += 1
+        self.assertGreaterEqual(checked, 6)
+
+    def test_rotated_phone_style_file(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp) / 'base.mp4'
+            encode_source(base, pattern())
+            for angle in (90, 270):
+                coded = Path(temp) / f'coded{angle}.mp4'
+                # arquivo "em pé" (1080×1920 codificado) com matriz de exibição: o FFmpeg mostra deitado (1920×1080) ao decodificar
+                subprocess.run([media.tool('ffmpeg'), '-nostdin', '-loglevel', 'error', '-y', '-i', str(base), '-vf', 'transpose=1' if angle == 90 else 'transpose=2',
+                                '-c:v', 'libx264', '-qp', '0', '-pix_fmt', 'yuv444p', str(coded)], check=True)
+                rot = Path(temp) / f'rot{angle}.mp4'
+                subprocess.run([media.tool('ffmpeg'), '-nostdin', '-loglevel', 'error', '-y', '-display_rotation', str(-angle if angle == 90 else 90), '-i', str(coded),
+                                '-c', 'copy', str(rot)], check=True)
+                info = media.probe(rot)
+                self.assertIn(info['rotation'], (90, 270), info)
+                truth = frame_rgb(rot)                                    # o que um player mostra (autorotate)
+                self.assertEqual(truth.shape[:2], (SH, SW))
+                self.check_against_truth(rot, truth, (SW, SH))
+
+    def test_anamorphic_sar_2_to_1(self):
+        with tempfile.TemporaryDirectory() as temp:
+            squeezed = Path(temp) / 'sq.mp4'
+            raw = Path(temp) / 'p.rgb'
+            raw.write_bytes(pattern().tobytes() * 12)
+            subprocess.run([media.tool('ffmpeg'), '-nostdin', '-loglevel', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{SW}x{SH}', '-r', '10',
+                            '-i', str(raw), '-t', '1', '-vf', 'scale=960:1080:flags=area,setsar=2/1,format=yuv444p', '-c:v', 'libx264', '-qp', '0',
+                            '-pix_fmt', 'yuv444p', str(squeezed)], check=True)
+            info = media.probe(squeezed)
+            self.assertEqual((info['width'], info['height'], round(info['sar'], 2)), (960, 1080, 2.0))
+            truth = frame_rgb(squeezed, vf='scale=iw*2:ih:flags=bilinear,setsar=1')
+            self.check_against_truth(squeezed, truth, (1920, 1080))
+
+
 class Masks(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
