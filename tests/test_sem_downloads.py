@@ -15,6 +15,7 @@ ALLOWED = {
     'desktop.py': 'verifica o servidor local do app (127.0.0.1)',
     'licensing.py': 'servidor de licença, só se `cloud_config.json` existir',
     'preflight.py': 'teste de conectividade (socket) antes de baixar modelo do modo com IA',
+    'selftest.py': 'autoteste de instalação: só conecta em 127.0.0.1 (servidor local do próprio app)',
 }
 
 

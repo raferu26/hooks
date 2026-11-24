@@ -109,7 +109,8 @@ class TitleParity(unittest.TestCase):
         script = ("const C=require(%r);const cs=JSON.parse(require('fs').readFileSync(0,'utf8'));console.log(JSON.stringify(cs.map(c=>C.capWrap(c.text,c.width,3))))" % str(CAPJS))
         got = json.loads(subprocess.run([NODE, '-e', script], input=json.dumps(cases), capture_output=True, text=True, check=True).stdout)
         for c, g in zip(cases, got):
-            self.assertEqual(g, textwrap.wrap(c['text'], width=c['width'])[:3], c)
+            # o textwrap do Python 3.11 (o do Windows) deixa um espaço no fim da linha quando quebra uma palavra longa; o 3.13 não: o espaço final não muda o layout
+            self.assertEqual(g, [x.rstrip() for x in textwrap.wrap(c['text'], width=c['width'])[:3]], c)
 
     def test_title_spec_matches_exporter(self):
         ass = captions.make_ass([], 0, 2, titles=[dict(start=0, end=2, text='x', style=k, position=p) for k, p in (('big', 'top'), ('top', 'center'), ('bar', 'bottom'))], captions=False)

@@ -16,6 +16,7 @@ ALLOWED = {
     'denoise.py': 'D5 RNNoise', 'ollama.py': 'D6 Ollama', 'app.py': 'D5/D6 (denoise, lista de modelos Ollama)',
     'store.py': 'D1/D6 campos de perfil (whisper_device, ollama*)', 'bench.py': 'campo de perfil ollama',
     'capabilities.py': 'texto descritivo (N22)',
+    'support.py': 'diagnóstico: só LISTA nomes/versões de bibliotecas instaladas (texto); não as importa nem usa',
 }
 
 
