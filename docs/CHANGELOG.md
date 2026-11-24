@@ -95,3 +95,10 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 - **TESTE:** e2e `fala_nao_refaz_lista_ao_cortar`, `fala_atualiza_risco_no_lugar`, `fala_desfaz_risco_no_lugar` (+ os anteriores) e e2e completo sem falhas.
 - **RESULTADO:** mutate p50/p95 **5,7/7,1 ms (100 cortes)**, **6,7/10,5 ms (200)**, 13,7/20,5 ms (500). Tabela em `docs/BASELINE.md` §3b.
 - **Lacuna:** mudar a seleção de palavras ainda recria a lista; sem virtualização.
+
+## [Ctrl+K: ordenação por relevância + medidor de eficiência] — 24/11/2026 (A04)
+- **ANTES (`validacao/medir_ctrlk.py`, 31 ações):** menor nº de letras para a ação ser a 1ª da lista: média **2,2**; 28/31 em ≤3 letras; **"Abrir seção: Legendas" nunca era a primeira** (perdia para "Ligar/desligar legendas ao vivo").
+- **ALTERAÇÃO** (`ui/studio.js`): ordem = nome começa com a busca → palavra começa com a busca → contém; empate pelo nome mais curto.
+- **TESTE:** e2e `cmdk_*` (7) e e2e completo sem falhas.
+- **RESULTADO:** média **1,6 letras**; **31/31** em ≤3 letras (Ctrl+K + 1–3 letras + Enter = 4–6 teclas); nenhuma ação inalcançável como 1ª.
+- **Não medido:** descoberta pelo usuário (depende do botão ⌕ e do diálogo `?`); comparação de cliques com a navegação por mouse; pessoas.

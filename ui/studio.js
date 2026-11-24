@@ -470,7 +470,8 @@ function commands(){const P=ST.proj,sel=!!ST.sel,d=ST.data,list=[
  return list.filter(x=>x[3]).map(([label,key,words,,run])=>({label,key:key.trim(),words,run,hay:norm(label+' '+words+' '+key)}))}
 const CMDK={items:[],shown:[],at:0};
 function cmdRender(){const q=norm($('cmdInput').value).split(/\s+/).filter(Boolean);
- CMDK.shown=CMDK.items.filter(c=>q.every(t=>c.hay.includes(t))).sort((a,b)=>(norm(b.label).startsWith(q[0]||'~')?1:0)-(norm(a.label).startsWith(q[0]||'~')?1:0));
+ const rank=c=>{const l=norm(c.label),w=l.split(/[^a-z0-9]+/);return q.length?(l.startsWith(q[0])?0:q.every(t=>w.some(x=>x.startsWith(t)))?1:2):0};   /* começa com a busca < palavra começa com a busca < contém; empate: nome mais curto */
+ CMDK.shown=CMDK.items.filter(c=>q.every(t=>c.hay.includes(t))).sort((a,b)=>rank(a)-rank(b)||a.label.length-b.label.length);
  CMDK.at=Math.min(CMDK.at,Math.max(0,CMDK.shown.length-1));
  $('cmdList').innerHTML=CMDK.shown.length?CMDK.shown.map((c,i)=>`<li role="option" id="cmd${i}" data-i="${i}" class="${i===CMDK.at?'on':''}" aria-selected="${i===CMDK.at}"><span class="lbl">${esc(c.label)}</span>${c.key?`<kbd>${esc(c.key)}</kbd>`:''}</li>`).join(''):'<li class="empty" role="option" aria-disabled="true">Nenhuma ação encontrada.</li>';
  $('cmdInput').setAttribute('aria-activedescendant',CMDK.shown.length?'cmd'+CMDK.at:'')}
