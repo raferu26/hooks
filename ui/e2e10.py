@@ -253,10 +253,27 @@ with sync_playwright() as p:
         if pg2.evaluate("typeof ST!=='undefined'&&ST.open&&!!ST.data&&ST.data.preview.available"): break
         pg2.wait_for_timeout(200)
     pg2.wait_for_timeout(500)
-    lf = _lf.measure(pg2, 'dynamic'); res['legenda_fidelidade'] = lf; pg2.close()
-    check('legenda_largura_igual_ao_ass', .96 <= lf.get('razao_largura_html_sobre_ass', 0) <= 1.04, lf)
-    check('legenda_altura_igual_ao_ass', .96 <= lf.get('razao_altura_html_sobre_ass', 0) <= 1.04, lf)
-    check('legenda_base_igual_ao_ass', abs(lf.get('diferenca_base_pontos_pct', 9)) < .5, lf)
+    # blocos da legenda ao vivo = blocos da exportação (sem texto editado): impact mostra no máximo 3 palavras em caixa alta; com texto editado, a linha inteira
+    blocos = pg2.evaluate("""()=>{const r={};const l=ST.lines[0];const t=l.start+.15;
+      ST.linesEdited=false;ST.proj.captions.style='impact';seekClip(t);drawLive();const a=document.querySelector('#live .cap .in');
+      r.impact_palavras=a?a.querySelectorAll('.w').length:-1;r.impact_caixa_alta=a?getComputedStyle(document.querySelector('#live .cap')).textTransform:'';
+      ST.proj.captions.style='dynamic';drawLive();const b=document.querySelector('#live .cap .in');r.dynamic_palavras=b?b.querySelectorAll('.w').length:-1;
+      ST.linesEdited=true;drawLive();const c=document.querySelector('#live .cap .in');r.editada_palavras=c?c.querySelectorAll('.w').length:-1;r.linha_palavras=l.words.length;
+      ST.linesEdited=false;return r}""")
+    res['blocos_legenda'] = blocos
+    check('blocos_impact_ate_3_palavras', 0 < blocos['impact_palavras'] <= 3 and blocos['impact_caixa_alta'] == 'uppercase', blocos)
+    check('blocos_dynamic_ate_4_palavras', 0 < blocos['dynamic_palavras'] <= 4, blocos)
+    check('texto_editado_mostra_linha_inteira', blocos['editada_palavras'] == blocos['linha_palavras'], blocos)
+    res['legenda_fidelidade'] = {}
+    for est in ('dynamic', 'clean', 'bold', 'minimal', 'impact', 'pop', 'box'):
+        lf = _lf.measure(pg2, est); res['legenda_fidelidade'][est] = {k: v for k, v in lf.items() if k.startswith(('razao', 'diferenca', 'erro'))}
+        check(f'legenda_{est}_tamanho_igual_ao_ass', .97 <= lf.get('razao_largura_html_sobre_ass', 0) <= 1.03 and .97 <= lf.get('razao_altura_html_sobre_ass', 0) <= 1.03, lf)
+        check(f'legenda_{est}_base_igual_ao_ass', abs(lf.get('diferenca_base_pontos_pct', 9)) < .7, lf)
+    res['titulos_fidelidade'] = []
+    for kind, pos in (('big', 'top'), ('top', 'top'), ('bar', 'center'), ('big', 'bottom')):
+        tf = _lf.measure_title(pg2, kind, pos); res['titulos_fidelidade'].append({k: v for k, v in tf.items() if k not in ('html', 'ass')})
+        check(f'titulo_{kind}_{pos}_igual_ao_ass', .96 <= tf.get('razao_largura', 0) <= 1.04 and .96 <= tf.get('razao_altura', 0) <= 1.04 and abs(tf.get('diferenca_topo_pontos_pct', 9)) < .3, tf)
+    pg2.close()
     check('sair_fecha', not pg.evaluate("ST.open"))
     res['console_errors'] = errs
     check('sem_erros_console', not errs, errs)
