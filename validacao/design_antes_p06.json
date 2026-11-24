@@ -1,0 +1,37 @@
+{
+ "textos": 116,
+ "tamanhos_fonte": {
+  "12": 10,
+  "14": 52,
+  "15": 2,
+  "12.5": 27,
+  "11.5": 17,
+  "13.5": 8
+ },
+ "fontes_menores_que_12px": 17,
+ "exemplos_pequenos": [
+  "0:00.3 11.5px",
+  "0:02.1 11.5px",
+  "0:03.7 11.5px",
+  "0:05.2 11.5px",
+  "0:07.1 11.5px",
+  "0:09.0 11.5px",
+  "0:10.9 11.5px",
+  "0:12.4 11.5px"
+ ],
+ "contraste_abaixo_AA": 0,
+ "exemplos_contraste": [],
+ "alvos_menores_que_28px": 18,
+ "exemplos_alvos": [
+  "stState 93x22",
+  "stUndo 32x27",
+  "stRedo 32x27",
+  "stKeys 28x27",
+  "quiet small 24x17",
+  "stMute 38x27",
+  "tlOut 35x27",
+  "tlIn 35x27",
+  "tlAll 113x27",
+  "tlFold 107x27"
+ ]
+}

@@ -1,0 +1,17 @@
+{
+ "textos": 116,
+ "tamanhos_fonte": {
+  "12": 27,
+  "13": 27,
+  "14": 60,
+  "16": 2
+ },
+ "fontes_menores_que_12px": 0,
+ "exemplos_pequenos": [],
+ "contraste_abaixo_AA": 0,
+ "exemplos_contraste": [],
+ "alvos_menores_que_28px": 9,
+ "exemplos_alvos": [
+  "quiet small 25x28"
+ ]
+}

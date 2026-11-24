@@ -8,7 +8,7 @@ Evidência = leitura do código (`ui/`) e e2e `ui/e2e10.py` (1440×900, Linux, m
 | P03 | Prévia lenta | **Melhorado**: 11 s → 5–6 s (clipe 14,5 s); 15,8 → 6,6 s (28 s de vídeo); sem camadas L1/L2 | profiling + e2e `segundos_ate_previa_nova` | e2e, 126 testes de render | Avaliar sobreposição imediata (L1) após medir a latência restante |
 | P04 | Salvar ≠ renderizar | **Resolvido** | Ctrl+S → `saveNow()`; autosave `learn=False` | `test_salvar_previa` (9), e2e | — |
 | P05 | 8 pistas | **Resolvido** em 3 + extras | e2e `tres_pistas`, `pista_zoom_aparece`, `todas_as_pistas` | e2e | Ripple e arrasto sem redesenho (snap já feito) |
-| P06 | Hierarquia visual | **Pendente** | sem tokens de design; tipografia 10–12 px | — | Design system (A05) |
+| P06 | Hierarquia visual | **Parcial**: escala tipográfica (4 tamanhos), mínimo 12 px, alvos ≥28 px | `validacao/medir_design.py` (17→0 fontes <12 px; 18→0 alvos <28 px) | `test_design_tokens` | Hierarquia por cor/peso, espaçamento 4 px, contraste dos blocos da timeline |
 | P07 | Fluxo fragmentado | **Parcial** (`#stFlow` oculto <1180 px) | `style.css` 305 | e2e parcial | Revisar fluxo Importar→Editar→Conferir→Exportar |
 | P08 | Feedback de estado | **Resolvido** (Salvo/Salvando/…/Prévia anterior) | e2e `estado_nao_salvo`, `autosave_salvo`, `previa_marcada_anterior` | e2e | — |
 | P09 | Atalhos | **Parcial**: guarda de campo, `?`, Ctrl+Z/Y | `studio.js` 421–440 | e2e `ctrl_z`, `atalhos_dialogo` | Ctrl+K e mapa pesquisável (A04) |

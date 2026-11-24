@@ -49,3 +49,10 @@ Histórico anterior à migração é **herdado e não reverificado**: ver `docs/
 - **ALTERAÇÃO:** `liveclips/deps.py` (cv2, numpy, yt_dlp obrigatórios; opentimelineio opcional) → `App.state()['dependencies']`, banner vermelho "Recurso indisponível" com o que para de funcionar e como corrigir, e item `dependencias` na pré-checagem (aviso se obrigatório, ok/informativo se opcional).
 - **TESTE:** `tests/test_deps.py` (6) + `test_interface`, `test_http`, `test_sem_ia_guard` (30 OK); verificado no navegador sem OpenCV: banners de opencv e yt-dlp aparecem.
 - **Não coberto:** mensagem dentro do corte quando a capa é pulada (hoje só o evento já existente + banner).
+
+## [Design system base: escala tipográfica e alvos de clique] — 24/11/2026 (P06)
+- **ANTES (`validacao/medir_design.py`, Estúdio 1440×900):** 6 tamanhos de fonte (11,5 / 12 / 12,5 / 13,5 / 14 / 15 px); **17** textos < 12 px (tempos da fala em 11,5 px, rótulos); **18** alvos de clique < 28 px (desfazer/refazer 32×27, zoom 35×27, "?" 28×27, estado 93×22…); contraste AA: 0 falhas.
+- **ALTERAÇÃO** (`ui/style.css`): tokens `--fs-xs/sm/md/lg` (12/13/14/16 px) + `--tap:28px`; 54 tamanhos soltos trocados pelos tokens (títulos 18–28 px mantidos); `button.small` com mínimo 28×28; `#stState` 28 px.
+- **TESTE:** `tests/test_design_tokens.py` (4) + `test_interface`; e2e completo sem falhas; layout inalterado (±1 px).
+- **RESULTADO:** tamanhos de fonte **6 → 4**; textos < 12 px **17 → 0**; alvos < 28 px **18 → 0**; contraste AA segue 0 falhas (medição exclui blocos da timeline e o vídeo).
+- **Não feito/validado:** contraste dos blocos da timeline; espaçamento em grade de 4 px; áreas de 40 px para toque; revisão visual por pessoas.
