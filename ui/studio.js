@@ -167,7 +167,7 @@ function sectionBody(tab){const P=ST.proj,d=ST.data;let body='';
   ${range_('captions.size','Tamanho',24,68,1,c.size??pf.font_size??46)}${range_('captions.margin','Distância da base',130,500,5,c.margin??pf.caption_margin??340)}${field('Cor do destaque',`<input type="color" data-f="captions.color" data-t="strnull" value="${c.color||rgb(pf.caption_color||'00E8FF')}">`)}</div>
   <div><button class="small" data-act="resetcaps">Voltar ao padrão do streamer</button></div>
   <h4 aria-level="3">Revisão das palavras</h4>${(()=>{const r=d.refine||{},low=ST.lines.reduce((n,l)=>n+(l.words||[]).filter(w=>w.p!=null&&w.p<.5).length,0);const st=r.status==='working'||r.status==='queued'?`<span class="chip info">${r.status==='queued'?'Na fila':'Revisando…'}</span>`:r.status==='done'?`<span class="chip good">Revisada${r.changed!=null?' · '+r.changed+' palavra'+(r.changed===1?'':'s')+' mudou':''}</span>`:r.status==='error'?`<span class="chip bad">${esc(r.error||'Falhou')}</span>`:'';return `<p class="help" style="margin:0">${low?low+' palavra'+(low===1?'':'s')+' de baixa confiança (sublinhadas em âmbar à esquerda).':'Nenhuma palavra de baixa confiança.'}</p><div class="row"><button class="small" data-act="refine" ${ST.linesEdited?'disabled title="Você editou o texto à mão"':''}>Melhorar legendas (2ª passagem)</button>${st}</div>${ST.linesEdited?'<p class="help">Você editou o texto à mão; a revisão automática não sobrescreve suas edições.</p>':''}`})()}
-  <p class="help">${ST.linesEdited?'Você editou o texto das legendas; elas não mudam mais sozinhas.':'Para corrigir uma palavra, clique em ✎ na fala à esquerda.'}</p>${ST.linesEdited?'<div><button class="small" data-act="autolines">Descartar minhas edições de texto</button></div>':''}`}
+  <p class="help">${ST.linesEdited?'Você editou o texto das legendas; elas não mudam mais sozinhas.':'Para corrigir uma palavra, clique em ✎ na fala à esquerda.'}</p><div class="row"><button class="small" data-act="textcap" title="Cole o texto e distribua pelas pausas do áudio (sem IA)">Legenda a partir de texto…</button></div>${ST.linesEdited?'<div><button class="small" data-act="autolines">Descartar minhas edições de texto</button></div>':''}`}
  if(tab==='titles'){
   body=`<div class="row"><h4 class="grow">Títulos na tela</h4><button class="small" data-op="title">＋ Título</button></div>${P.titles.length?`<div class="list">${P.titles.map((t,i)=>`<div class="item ${ST.item?.kind==='title'&&ST.item.id===t.id?'sel':''}" data-pick="title:${t.id}"><input data-f="titles.${i}.text" data-t="str" value="${esc(t.text)}" maxlength="90"><div class="two"><select data-f="titles.${i}.style" data-t="str">${d.catalog.title_styles.map(s=>`<option value="${s}" ${t.style===s?'selected':''}>${TITLE_LABELS[s]||s}</option>`).join('')}</select><select data-f="titles.${i}.position" data-t="str">${['top','center','bottom'].map(s=>`<option value="${s}" ${t.position===s?'selected':''}>${POS_LABELS[s]}</option>`).join('')}</select></div><div class="two"><div><label>De (s)</label><input type="number" step=".1" min="0" data-f="titles.${i}.start" data-t="num" value="${t.start}"></div><div><label>Até (s)</label><input type="number" step=".1" min="0" data-f="titles.${i}.end" data-t="num" value="${t.end}"></div></div><div class="row"><input type="color" data-f="titles.${i}.color" data-t="str" value="${t.color}"><span class="grow"></span><button class="small quiet danger" data-del="titles:${i}">Remover</button></div></div>`).join('')}</div>`:'<p class="help">Nenhum título. Um bom título nos primeiros 3 segundos ajuda a prender.</p>'}
   ${d.suggestions.titles.length?`<h4 aria-level="3">Sugestões tiradas da sua fala</h4><div class="list">${d.suggestions.titles.map((s,i)=>`<button class="small" style="text-align:left" data-sugtitle="${i}">＋ ${esc(s.text)}</button>`).join('')}</div>`:''}`}
@@ -277,6 +277,7 @@ function act_(name,el){const d=ST.data;
  if(name==='abtest'){persist({learn:true}).then(()=>api('/api/variant/ab',{id:ST.id})).then(r=>{toast('Variação B criada: '+r.change);refresh(true)}).catch(e=>toast(e.message,true))}
  if(name==='series'){persist({learn:true}).then(()=>api('/api/variant/series',{id:ST.id})).then(r=>{toast('Corte dividido em duas partes. '+r.reason);refresh(true)}).catch(e=>toast(e.message,true))}
  if(name==='resetcaps')mutate(()=>{Object.assign(ST.proj.captions,{style:null,size:null,margin:null,color:null})});
+ if(name==='textcap'){openTextCaps();return}
  if(name==='autolines')mutate(()=>{ST.lines=clone(d.auto_lines);ST.linesEdited=false});
  if(name==='rmteaser')mutate(()=>{ST.proj.teaser=null;if(ST.item?.kind==='teaser')ST.item=null});
  if(name==='suggteaser')mutate(()=>{ST.proj.teaser={start:d.suggestions.teaser.start,end:d.suggestions.teaser.end}});
@@ -337,7 +338,7 @@ function drawTimeline(){if(!ST.open)return;const D=dur(),W=Math.ceil(D*ST.pps)+2
  h+=`<div class="clipbar" style="top:${R.video+3}px;width:${X(D)}px"></div>`;
  autoCuts().forEach(c=>{h+=blk('cut auto',c.start,c.end,R.video,c.kind==='repetition'?'repetição':'pausa','',false)});
  P.cuts.forEach(c=>{h+=blk('cut',c.start,c.end,R.video,'cortar','data-kind="cut" data-key="'+c._k+'"',true,ST.item?.kind==='cut'&&ST.item.k===c._k)});
- ST.lines.forEach(l=>{h+=blk('speech',l.start,l.end,R.speech,l.text,`data-seek="${l.start}"`,false)});
+ ST.lines.forEach((l,i)=>{h+=blk('speech',l.start,l.end,R.speech,l.text,`data-seek="${l.start}" data-line="${i}"`,true)});
  if(R.zoom!=null){P.zooms.forEach(z=>{h+=blk('zoom',z.start,z.end,R.zoom,z.zoom.toFixed(2)+'×','data-kind="zoom" data-key="'+z.id+'"',true,ST.item?.kind==='zoom'&&ST.item.id===z.id)});
   (ST.data.decisions||[]).filter(x=>x.kind==='zoom'&&(ST.overrides[x.id]??x.enabled)).forEach(x=>{h+=blk('zoom auto',+x.start,+x.end,R.zoom,'auto','',false)})}
  else P.zooms.forEach(z=>{h+=`<div class="tick-mark zoom" style="left:${X(z.start)}px;top:${R.video}px" title="zoom"></div>`});
@@ -463,6 +464,7 @@ function commands(){const P=ST.proj,sel=!!ST.sel,d=ST.data,list=[
  ['Ligar / desligar legendas ao vivo','','previa legenda',true,()=>$('liveToggle').click()],
  ['Ligar / desligar prévia automática','','autoprevia',true,()=>$('stAuto').click()],
  ['Rejeitar este corte','R','descartar',true,()=>$('stReject').click()],
+ ['Legenda a partir de texto…','','colar texto sincronizar toques srt',true,()=>openTextCaps()],
  ['Ir para Exportar (confirme com Enter no botão)','Ctrl+Enter ×2','aprovar enviar',!ST.busy,()=>{$('stApprove').focus();toast('Exportar: pressione Enter no botão destacado para confirmar.')}],
  ['Mostrar os atalhos do teclado','?','ajuda',true,showKeys],
  ['Voltar à biblioteca','','sair fechar',true,()=>leave()]];
@@ -483,7 +485,7 @@ $('cmdList').addEventListener('click',e=>{const li=e.target.closest('li[data-i]'
 $('stCmd').onclick=cmdOpen;
 document.addEventListener('keydown',e=>{if(ST.open&&(e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&e.key.toLowerCase()==='k'&&!document.querySelector('dialog[open]')){e.preventDefault();cmdOpen()}});
 function showKeys(){const d=$('keysDialog');$('keysList').innerHTML=SHORTCUTS.map(([k,v])=>`<div class="row"><kbd>${k}</kbd><span class="grow">${v}</span></div>`).join('');d.showModal()}
-document.addEventListener('keydown',e=>{if(!ST.open||document.querySelector('dialog[open]'))return;const tag=(e.target.tagName||'');const typing=['INPUT','TEXTAREA','SELECT'].includes(tag);const mod=e.ctrlKey||e.metaKey;
+document.addEventListener('keydown',e=>{if(!ST.open||document.querySelector('dialog[open]'))return;if(TX.on){tapKey(e);return}const tag=(e.target.tagName||'');const typing=['INPUT','TEXTAREA','SELECT'].includes(tag);const mod=e.ctrlKey||e.metaKey;
  if(mod&&e.key.toLowerCase()==='z'){if(typing)return;e.preventDefault();e.shiftKey?redo():undo();return}
  if(mod&&e.key.toLowerCase()==='y'){if(typing)return;e.preventDefault();redo();return}
  if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();saveNow();return}

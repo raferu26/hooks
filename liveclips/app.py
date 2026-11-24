@@ -352,6 +352,8 @@ class App:
                 return self.markers_state(s.session(payload['session']))
             if path=='/api/session/subtitles/import':
                 return self.import_subtitles(s.session(payload['session']),payload)
+            if path=='/api/session/subtitles/paste':
+                return self.paste_subtitles(s.session(payload['session']),payload)
             if path=='/api/session/subtitles/clear':
                 folder=Path(s.session(payload['session'])['path'])/'legendas'
                 for f in folder.glob('*') if folder.is_dir() else []:
@@ -406,6 +408,8 @@ class App:
             if path=='/api/learning/accept-term':
                 terms=s.accept_term(payload['streamer'],payload.get('term',''))
                 return dict(learned_terms=terms,details=self.learning_details(payload['streamer']))
+            if path=='/api/captions/from-text':return self.captions_from_text(payload)
+            if path=='/api/captions/from-file':return self.captions_from_file(payload)
             if path=='/api/captions/refine':
                 s.candidate(payload['id']);self.engine.queue_refine(payload['id'],payload.get('model') or None)
                 return dict(ok=True)
@@ -850,6 +854,63 @@ class App:
             for r in risks:s.event('mídia: '+r['id'],r['message'][:160])
         except Exception:pass   # o inventário informa riscos; nunca impede a importação
         return dict(id=sid,riscos=risks)
+
+    def _clip_envelope(self,session,start,end):
+        """Envelope de energia (dBFS, passo fixo) do trecho [start,end] da sessão, juntando os arquivos que o cobrem."""
+        import numpy as np
+        from . import technical,timeline
+        rows=timeline.build_timeline(self.store.segments(session['id']))
+        parts=timeline.plan(rows,start,end)
+        dbs=[];step=technical.WINDOW
+        for part in parts:
+            db,step=technical.envelope(part['path'],part['in'],part['out']-part['in']);dbs.append(db)
+        return (np.concatenate(dbs) if dbs else np.zeros(0,dtype=np.float32)),step
+
+    def captions_from_file(self,payload):
+        """Legenda do corte a partir de um arquivo SRT/VTT/ASS do usuário. `relative`: os tempos do arquivo começam no início do CORTE; senão são
+        tempos da gravação inteira e só o trecho do corte é aproveitado. Tempos vêm do arquivo (não são estimados). Não grava nada."""
+        from . import subtitles
+        item=self.store.candidate(payload['id']);start,end=float(item['start']),float(item['end'])
+        found=subtitles.parse(str(payload.get('content') or '').encode('utf-8'),str(payload.get('name') or 'legenda.srt'))
+        if payload.get('relative'):
+            rows=[dict(x,start=max(0.0,x['start']),end=min(end-start,x['end'])) for x in found if x['start']<end-start]
+        else:
+            rows=subtitles.window(found,start,end)
+        lines=[dict(start=round(x['start'],3),end=round(x['end'],3),text=x['text'],words=[]) for x in rows if x['end']>x['start']]
+        if not lines:raise ValueError('Nenhuma fala desse arquivo cai dentro deste corte. Se os tempos começam no início do corte, marque essa opção.')
+        return dict(lines=lines,warnings=[],timing='arquivo',duration=round(end-start,3),speech=[])
+
+    def captions_from_text(self,payload):
+        """Legenda do corte a partir do texto do usuário (sem reconhecimento de fala). Devolve linhas no formato do Estúdio (tempos em
+        segundos desde o início do corte, na linha do tempo original), com `timing:'estimado'` (energia/pausas/sílabas) ou `'toques'`
+        (o usuário marcou o início das frases). NÃO grava nada: o Estúdio aplica, mostra e o usuário confirma."""
+        from . import captions_text
+        item=self.store.candidate(payload['id']);session=self.store.session(item['session'])
+        start,end=float(item['start']),float(item['end'])
+        if not captions_text.split_phrases(payload.get('text')):raise ValueError('Cole ou digite o texto da legenda.')
+        taps=[start+float(t) for t in (payload.get('taps') or []) if t is not None][:400]
+        db,step=self._clip_envelope(session,start,end)
+        result=captions_text.build(str(payload.get('text') or ''),db,step,offset=start,taps=taps or None,clip_end=end)
+        lines=[dict(start=round(x['start']-start,3),end=round(x['end']-start,3),text=x['text'],
+                    words=[dict(start=round(w['start']-start,3),end=round(w['end']-start,3),word=w['word']) for w in x['words']])
+               for x in result['segments']]
+        return dict(lines=lines,warnings=result['warnings'],timing='toques' if taps else 'estimado',duration=round(end-start,3),
+                    speech=[[round(a-start,3),round(b-start,3)] for a,b in result['spans']])
+
+    def paste_subtitles(self,session,payload):
+        """Legenda a partir do texto colado pelo usuário (sem reconhecimento de fala): distribui as frases no tempo de fala detectado
+        por energia. `start`/`end` (tempo da sessão) delimitam o trecho; `taps` (opcional) fixam o início de cada frase. Gera um SRT em
+        `legendas/` e devolve o estado de marcadores/legendas com `warnings` e `timing:'estimado'`."""
+        from . import captions_text
+        start=float(payload['start']);end=float(payload['end'])
+        if not 0<=start<end or end-start>600:raise ValueError('Escolha um trecho de até 10 minutos.')
+        if not captions_text.split_phrases(payload.get('text')):raise ValueError('Cole ou digite o texto da legenda.')
+        db,step=self._clip_envelope(session,start,end)
+        result=captions_text.build(str(payload.get('text') or ''),db,step,offset=start,taps=payload.get('taps') or None,clip_end=end)
+        folder=Path(session['path'])/'legendas';folder.mkdir(exist_ok=True)
+        atomic.write_text(folder/'legenda_texto_colado.srt',result['srt'])
+        self.store.event('legenda','Legenda por texto colado: '+str(len(result['segments']))+' frases (tempos estimados, origem: texto do usuário)')
+        return dict(self.markers_state(session),imported=len(result['segments']),warnings=result['warnings'],timing='toques' if payload.get('taps') else 'estimado')
 
     def import_subtitles(self,session,payload):
         name=Path(str(payload.get('name') or 'legenda.srt')).name

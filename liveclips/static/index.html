@@ -402,6 +402,17 @@ dialog.cmd{width:min(560px,94vw);margin-top:12vh;overflow:hidden}
 .cmd-foot{padding:8px 16px;border-top:1px solid var(--line)}
 .snapguide{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--aqua);box-shadow:0 0 8px var(--aqua);pointer-events:none;z-index:7;display:none}
 /* classes t-big/t-bar/t-top: a classe `bar` colidia com a barra de progresso global (.bar) e achatava o título em faixa */
+/* Legenda por texto (sem IA) */
+.btnlike{display:inline-flex;align-items:center;min-height:var(--tap);padding:5px 10px;border:1px solid var(--line2);border-radius:7px;background:var(--panel2);cursor:pointer}
+#txtIn{width:100%;resize:vertical}
+#txtRes .item{display:flex;gap:10px;align-items:center;padding:4px 0}
+#txtRes input[type=number]{width:78px;flex:none}
+#txtRes input[type=text]{min-width:0}
+#txtRes{max-height:34vh;overflow:auto}
+#txtWarn .banner{margin:4px 0}
+.tapbar{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;z-index:30;background:var(--panel);border:1px solid var(--accent);border-radius:12px;padding:10px 14px;display:grid;gap:6px;min-width:300px;max-width:560px;box-shadow:0 10px 40px #000c}
+.tapbar .ph{font-size:var(--fs-lg);font-weight:650}
+.blk.speech .h{width:6px}
 
 </style></head>
 <body><svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -515,7 +526,7 @@ dialog.cmd{width:min(560px,94vw);margin-top:12vh;overflow:hidden}
  <div class="smain">
   <section class="scol" id="stLeft" aria-label="Fala"></section>
   <section class="stage"><div class="sbox"><div class="phone" id="phone"><video id="stVideo" playsinline preload="auto"></video><div class="live" id="live"></div><div class="safe hide" id="safe"><i class="top"></i><i class="bottom"></i><i class="side"></i></div><div class="wait hide" id="stWait"></div><div class="pbusy hide" id="stBusy">Gerando nova prévia…</div><div class="stale hide" id="stStale"><span>Prévia anterior. Cortes, zoom, cor e layout novos entram ao atualizar; legendas e títulos já aparecem ao vivo.</span><button type="button" class="small" id="stStaleGo">Atualizar (P)</button></div></div>
-   <div class="transport"><button id="stPlay" class="small" aria-label="Reproduzir" title="Reproduzir / pausar (Espaço)">▶</button><button id="stMute" class="small quiet" aria-label="Tirar o som" title="Som">🔊</button><span class="time" id="stTime">0:00,0</span><label class="switch mini"><input id="stAuto" type="checkbox" checked>Prévia automática</label><label class="switch mini"><input id="liveToggle" type="checkbox" checked>Legendas ao vivo</label><label class="switch mini"><input id="safeToggle" type="checkbox">Zonas seguras</label></div></div></section>
+   <div class="tapbar hide" id="tapBar" role="status" aria-live="polite"></div><div class="transport"><button id="stPlay" class="small" aria-label="Reproduzir" title="Reproduzir / pausar (Espaço)">▶</button><button id="stMute" class="small quiet" aria-label="Tirar o som" title="Som">🔊</button><span class="time" id="stTime">0:00,0</span><label class="switch mini"><input id="stAuto" type="checkbox" checked>Prévia automática</label><label class="switch mini"><input id="liveToggle" type="checkbox" checked>Legendas ao vivo</label><label class="switch mini"><input id="safeToggle" type="checkbox">Zonas seguras</label></div></div></section>
   <section class="scol right" id="stRight" aria-label="Inspetor"></section>
  </div>
  <div class="tlzone">
@@ -525,6 +536,10 @@ dialog.cmd{width:min(560px,94vw);margin-top:12vh;overflow:hidden}
  </div>
 </div>
 <dialog id="cmdDialog" class="cmd" aria-label="Buscar ação"><input id="cmdInput" type="text" autocomplete="off" spellcheck="false" placeholder="Buscar ação… (ex.: cortar, zoom, exportar)" aria-label="Buscar ação" role="combobox" aria-expanded="true" aria-controls="cmdList"><ul id="cmdList" role="listbox"></ul><div class="cmd-foot muted small">↑ ↓ navegam · Enter executa · Esc fecha</div></dialog>
+<dialog id="textDialog" aria-label="Legenda a partir de texto"><div class="dhead"><div><h2>Legenda a partir de texto</h2><p class="muted small">Sem IA: o Hook’s <b>não ouve</b> o que foi dito. Ele espalha as frases pelas <b>pausas e pela energia do áudio</b>, então os tempos são <b>estimados</b> (não é transcrição nem alinhamento fonético). Confira, marque o início das frases ou arraste os blocos na linha do tempo. Ctrl+Z desfaz.</p></div><button class="quiet" data-close aria-label="Fechar">✕</button></div>
+<div class="body"><textarea id="txtIn" rows="6" maxlength="20000" placeholder="Cole aqui o texto desta fala. Uma frase por linha funciona melhor."></textarea>
+<div class="row"><label class="small btnlike" for="txtFile" title="Texto (.txt) para distribuir pelo áudio, ou legenda pronta (.srt .vtt .ass) com tempos">Abrir texto ou legenda (.txt .srt .vtt .ass)</label><input id="txtFile" type="file" accept=".txt,.srt,.vtt,.ass,.ssa,text/plain" class="hide"><label class="switch mini"><input id="txtRel" type="checkbox">tempos do arquivo começam neste corte</label><span class="grow"></span><button id="txtTap" class="small" title="O vídeo toca e você aperta Enter quando cada frase começar">Marcar início das frases ao tocar</button><button id="txtGo" class="primary">Distribuir pelo áudio</button></div>
+<div id="txtWarn"></div><div id="txtRes" class="list"></div><div class="row"><span class="muted small grow" id="txtNote"></span><button id="txtDone">Fechar</button></div></div></dialog>
 <dialog id="keysDialog"><div class="dhead"><h2>Atalhos do Estúdio</h2><button class="quiet" data-close aria-label="Fechar">✕</button></div><div class="body list" id="keysList"></div></dialog>
 
 <dialog id="streamerDialog"><div class="dhead"><div><h2>Adicionar streamer</h2><p class="muted">Esse nome também será o nome da pasta.</p></div><button class="quiet" data-close aria-label="Fechar">✕</button></div><form id="streamerForm"><div><label for="streamerName">Nome</label><input id="streamerName" placeholder="Ex.: CORINGA" maxlength="60" required></div><button class="primary">Criar pasta e perfil</button></form></dialog>
@@ -1015,7 +1030,7 @@ function sectionBody(tab){const P=ST.proj,d=ST.data;let body='';
   ${range_('captions.size','Tamanho',24,68,1,c.size??pf.font_size??46)}${range_('captions.margin','Distância da base',130,500,5,c.margin??pf.caption_margin??340)}${field('Cor do destaque',`<input type="color" data-f="captions.color" data-t="strnull" value="${c.color||rgb(pf.caption_color||'00E8FF')}">`)}</div>
   <div><button class="small" data-act="resetcaps">Voltar ao padrão do streamer</button></div>
   <h4 aria-level="3">Revisão das palavras</h4>${(()=>{const r=d.refine||{},low=ST.lines.reduce((n,l)=>n+(l.words||[]).filter(w=>w.p!=null&&w.p<.5).length,0);const st=r.status==='working'||r.status==='queued'?`<span class="chip info">${r.status==='queued'?'Na fila':'Revisando…'}</span>`:r.status==='done'?`<span class="chip good">Revisada${r.changed!=null?' · '+r.changed+' palavra'+(r.changed===1?'':'s')+' mudou':''}</span>`:r.status==='error'?`<span class="chip bad">${esc(r.error||'Falhou')}</span>`:'';return `<p class="help" style="margin:0">${low?low+' palavra'+(low===1?'':'s')+' de baixa confiança (sublinhadas em âmbar à esquerda).':'Nenhuma palavra de baixa confiança.'}</p><div class="row"><button class="small" data-act="refine" ${ST.linesEdited?'disabled title="Você editou o texto à mão"':''}>Melhorar legendas (2ª passagem)</button>${st}</div>${ST.linesEdited?'<p class="help">Você editou o texto à mão; a revisão automática não sobrescreve suas edições.</p>':''}`})()}
-  <p class="help">${ST.linesEdited?'Você editou o texto das legendas; elas não mudam mais sozinhas.':'Para corrigir uma palavra, clique em ✎ na fala à esquerda.'}</p>${ST.linesEdited?'<div><button class="small" data-act="autolines">Descartar minhas edições de texto</button></div>':''}`}
+  <p class="help">${ST.linesEdited?'Você editou o texto das legendas; elas não mudam mais sozinhas.':'Para corrigir uma palavra, clique em ✎ na fala à esquerda.'}</p><div class="row"><button class="small" data-act="textcap" title="Cole o texto e distribua pelas pausas do áudio (sem IA)">Legenda a partir de texto…</button></div>${ST.linesEdited?'<div><button class="small" data-act="autolines">Descartar minhas edições de texto</button></div>':''}`}
  if(tab==='titles'){
   body=`<div class="row"><h4 class="grow">Títulos na tela</h4><button class="small" data-op="title">＋ Título</button></div>${P.titles.length?`<div class="list">${P.titles.map((t,i)=>`<div class="item ${ST.item?.kind==='title'&&ST.item.id===t.id?'sel':''}" data-pick="title:${t.id}"><input data-f="titles.${i}.text" data-t="str" value="${esc(t.text)}" maxlength="90"><div class="two"><select data-f="titles.${i}.style" data-t="str">${d.catalog.title_styles.map(s=>`<option value="${s}" ${t.style===s?'selected':''}>${TITLE_LABELS[s]||s}</option>`).join('')}</select><select data-f="titles.${i}.position" data-t="str">${['top','center','bottom'].map(s=>`<option value="${s}" ${t.position===s?'selected':''}>${POS_LABELS[s]}</option>`).join('')}</select></div><div class="two"><div><label>De (s)</label><input type="number" step=".1" min="0" data-f="titles.${i}.start" data-t="num" value="${t.start}"></div><div><label>Até (s)</label><input type="number" step=".1" min="0" data-f="titles.${i}.end" data-t="num" value="${t.end}"></div></div><div class="row"><input type="color" data-f="titles.${i}.color" data-t="str" value="${t.color}"><span class="grow"></span><button class="small quiet danger" data-del="titles:${i}">Remover</button></div></div>`).join('')}</div>`:'<p class="help">Nenhum título. Um bom título nos primeiros 3 segundos ajuda a prender.</p>'}
   ${d.suggestions.titles.length?`<h4 aria-level="3">Sugestões tiradas da sua fala</h4><div class="list">${d.suggestions.titles.map((s,i)=>`<button class="small" style="text-align:left" data-sugtitle="${i}">＋ ${esc(s.text)}</button>`).join('')}</div>`:''}`}
@@ -1125,6 +1140,7 @@ function act_(name,el){const d=ST.data;
  if(name==='abtest'){persist({learn:true}).then(()=>api('/api/variant/ab',{id:ST.id})).then(r=>{toast('Variação B criada: '+r.change);refresh(true)}).catch(e=>toast(e.message,true))}
  if(name==='series'){persist({learn:true}).then(()=>api('/api/variant/series',{id:ST.id})).then(r=>{toast('Corte dividido em duas partes. '+r.reason);refresh(true)}).catch(e=>toast(e.message,true))}
  if(name==='resetcaps')mutate(()=>{Object.assign(ST.proj.captions,{style:null,size:null,margin:null,color:null})});
+ if(name==='textcap'){openTextCaps();return}
  if(name==='autolines')mutate(()=>{ST.lines=clone(d.auto_lines);ST.linesEdited=false});
  if(name==='rmteaser')mutate(()=>{ST.proj.teaser=null;if(ST.item?.kind==='teaser')ST.item=null});
  if(name==='suggteaser')mutate(()=>{ST.proj.teaser={start:d.suggestions.teaser.start,end:d.suggestions.teaser.end}});
@@ -1185,7 +1201,7 @@ function drawTimeline(){if(!ST.open)return;const D=dur(),W=Math.ceil(D*ST.pps)+2
  h+=`<div class="clipbar" style="top:${R.video+3}px;width:${X(D)}px"></div>`;
  autoCuts().forEach(c=>{h+=blk('cut auto',c.start,c.end,R.video,c.kind==='repetition'?'repetição':'pausa','',false)});
  P.cuts.forEach(c=>{h+=blk('cut',c.start,c.end,R.video,'cortar','data-kind="cut" data-key="'+c._k+'"',true,ST.item?.kind==='cut'&&ST.item.k===c._k)});
- ST.lines.forEach(l=>{h+=blk('speech',l.start,l.end,R.speech,l.text,`data-seek="${l.start}"`,false)});
+ ST.lines.forEach((l,i)=>{h+=blk('speech',l.start,l.end,R.speech,l.text,`data-seek="${l.start}" data-line="${i}"`,true)});
  if(R.zoom!=null){P.zooms.forEach(z=>{h+=blk('zoom',z.start,z.end,R.zoom,z.zoom.toFixed(2)+'×','data-kind="zoom" data-key="'+z.id+'"',true,ST.item?.kind==='zoom'&&ST.item.id===z.id)});
   (ST.data.decisions||[]).filter(x=>x.kind==='zoom'&&(ST.overrides[x.id]??x.enabled)).forEach(x=>{h+=blk('zoom auto',+x.start,+x.end,R.zoom,'auto','',false)})}
  else P.zooms.forEach(z=>{h+=`<div class="tick-mark zoom" style="left:${X(z.start)}px;top:${R.video}px" title="zoom"></div>`});
@@ -1311,6 +1327,7 @@ function commands(){const P=ST.proj,sel=!!ST.sel,d=ST.data,list=[
  ['Ligar / desligar legendas ao vivo','','previa legenda',true,()=>$('liveToggle').click()],
  ['Ligar / desligar prévia automática','','autoprevia',true,()=>$('stAuto').click()],
  ['Rejeitar este corte','R','descartar',true,()=>$('stReject').click()],
+ ['Legenda a partir de texto…','','colar texto sincronizar toques srt',true,()=>openTextCaps()],
  ['Ir para Exportar (confirme com Enter no botão)','Ctrl+Enter ×2','aprovar enviar',!ST.busy,()=>{$('stApprove').focus();toast('Exportar: pressione Enter no botão destacado para confirmar.')}],
  ['Mostrar os atalhos do teclado','?','ajuda',true,showKeys],
  ['Voltar à biblioteca','','sair fechar',true,()=>leave()]];
@@ -1331,7 +1348,7 @@ $('cmdList').addEventListener('click',e=>{const li=e.target.closest('li[data-i]'
 $('stCmd').onclick=cmdOpen;
 document.addEventListener('keydown',e=>{if(ST.open&&(e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&e.key.toLowerCase()==='k'&&!document.querySelector('dialog[open]')){e.preventDefault();cmdOpen()}});
 function showKeys(){const d=$('keysDialog');$('keysList').innerHTML=SHORTCUTS.map(([k,v])=>`<div class="row"><kbd>${k}</kbd><span class="grow">${v}</span></div>`).join('');d.showModal()}
-document.addEventListener('keydown',e=>{if(!ST.open||document.querySelector('dialog[open]'))return;const tag=(e.target.tagName||'');const typing=['INPUT','TEXTAREA','SELECT'].includes(tag);const mod=e.ctrlKey||e.metaKey;
+document.addEventListener('keydown',e=>{if(!ST.open||document.querySelector('dialog[open]'))return;if(TX.on){tapKey(e);return}const tag=(e.target.tagName||'');const typing=['INPUT','TEXTAREA','SELECT'].includes(tag);const mod=e.ctrlKey||e.metaKey;
  if(mod&&e.key.toLowerCase()==='z'){if(typing)return;e.preventDefault();e.shiftKey?redo():undo();return}
  if(mod&&e.key.toLowerCase()==='y'){if(typing)return;e.preventDefault();redo();return}
  if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();saveNow();return}
@@ -1400,6 +1417,72 @@ function capWrap(text,width,maxLines){
  if(cur)lines.push(cur);
  return lines.slice(0,maxLines||3)}
 if(typeof module!=='undefined')module.exports={capSmartGroups,capChunkFor,capWordsOf,capGroupAt,capPlain,capWrap,TITLE_SPEC,TITLE_MARGIN};
+
+/* Legenda a partir de TEXTO (sem IA). O app NÃO ouve a fala: distribui as frases do usuário pelas pausas e pela energia do áudio
+   (servidor: captions_text.py) ou pelos TOQUES que o usuário marca. Tempos são estimados e dizem isso na tela. */
+const TX={on:false,phr:[],tp:[],applied:false};
+function txtText(){return $('txtIn').value}
+function openTextCaps(){const d=$('textDialog');if(d.open)return;$('txtRes').innerHTML='';$('txtWarn').innerHTML='';$('txtNote').textContent='';TX.applied=false;d.showModal();$('txtIn').focus()}
+async function txtApply(taps){
+ if(!txtText().trim()){toast('Cole ou digite o texto da legenda.',true);return null}
+ try{const r=await api('/api/captions/from-text',{id:ST.id,text:txtText(),taps:taps||[]});
+  mutate(()=>{ST.lines=r.lines;ST.linesEdited=true;ST.edit=-1});TX.applied=true;txtShow(r);return r}
+ catch(e){toast(e.message,true);return null}}
+function txtShow(r){
+ $('txtWarn').innerHTML=((r&&r.warnings)||[]).map(w=>`<div class="banner"><span>${esc(w)}</span></div>`).join('');
+ TX.timing=(r&&r.timing)||TX.timing||'estimado';txtRender();
+ $('txtNote').textContent=TX.timing==='toques'?'Início das frases: marcado por você. Palavras dentro de cada frase: estimadas.':TX.timing==='arquivo'?'Tempos IMPORTADOS do arquivo (não estimados). Palavras individuais não têm tempo.':'Tempos ESTIMADOS pelas pausas e pela energia do áudio — não é transcrição. Corrija aqui ou arraste os blocos na linha do tempo.'}
+/* lista editável das frases (sempre a partir de ST.lines): início, fim, texto, dividir, unir com a próxima, excluir; tudo desfaz com Ctrl+Z */
+function txtRender(){$('txtRes').innerHTML=ST.lines.map((l,i)=>`<div class="item" data-i="${i}"><input type="number" step="0.1" min="0" data-f="start" value="${l.start.toFixed(2)}" aria-label="Início da frase ${i+1} (s)"><input type="number" step="0.1" min="0" data-f="end" value="${l.end.toFixed(2)}" aria-label="Fim da frase ${i+1} (s)"><input type="text" class="grow" data-f="text" value="${esc(l.text)}" aria-label="Texto da frase ${i+1}"><button class="small quiet" data-a="split" title="Dividir ao meio">✂</button><button class="small quiet" data-a="merge" title="Unir com a próxima" ${i===ST.lines.length-1?'disabled':''}>⤓</button><button class="small quiet danger" data-a="del" title="Excluir">✕</button></div>`).join('')||'<p class="muted small">Nenhuma frase ainda.</p>'}
+function lineSpan(l,a,z){/* muda início/fim da frase e reescala as palavras dentro do novo intervalo */const o={s:l.start,e:l.end},k=(z-a)/Math.max(.01,o.e-o.s);l.start=r2(a);l.end=r2(z);(l.words||[]).forEach(w=>{w.start=r2(a+(w.start-o.s)*k);w.end=r2(a+(w.end-o.s)*k)})}
+function lineSplit(l){const ws=l.words&&l.words.length?l.words:null,tx=l.text.split(/\s+/).filter(Boolean);if(tx.length<2)return null;const k=Math.ceil(tx.length/2);
+ let cut;if(ws&&ws.length===tx.length)cut=(ws[k-1].end+ws[k].start)/2;else{const c=tx.slice(0,k).join(' ').length/l.text.length;cut=l.start+(l.end-l.start)*c}
+ cut=r2(cut);const A={start:l.start,end:cut,text:tx.slice(0,k).join(' '),words:ws?ws.slice(0,k).map(w=>({...w})):[]},B={start:cut,end:l.end,text:tx.slice(k).join(' '),words:ws?ws.slice(k).map(w=>({...w})):[]};return[A,B]}
+$('txtRes').addEventListener('change',e=>{const inp=e.target.closest('input[data-f]');if(!inp)return;const row=inp.closest('[data-i]'),i=+row.dataset.i,l=ST.lines[i];if(!l)return;const f=inp.dataset.f;
+ /* só mexe (e só cria um passo de desfazer) se o valor realmente mudou */
+ if(f==='text'){const tx=inp.value.trim()||l.text;if(tx===l.text){inp.value=l.text;return}mutate(()=>{ST.linesEdited=true;ST.lines[i]=retextLine(l,tx)})}
+ else if(f==='start'){const v=Math.max(0,Math.min(l.end-.2,+inp.value||0));if(Math.abs(v-l.start)<.005){txtRender();return}mutate(()=>{ST.linesEdited=true;lineSpan(l,v,l.end)})}
+ else{const v=Math.max(l.start+.2,Math.min(dur(),+inp.value||0));if(Math.abs(v-l.end)<.005){txtRender();return}mutate(()=>{ST.linesEdited=true;lineSpan(l,l.start,v)})}
+ txtRender()});
+$('txtRes').addEventListener('click',e=>{const b=e.target.closest('button[data-a]');if(!b)return;const i=+b.closest('[data-i]').dataset.i,l=ST.lines[i];if(!l)return;const a=b.dataset.a;
+ if(a==='del')mutate(()=>{ST.lines.splice(i,1);ST.linesEdited=true});
+ else if(a==='merge'&&ST.lines[i+1])mutate(()=>{const n=ST.lines[i+1];ST.lines.splice(i,2,{start:l.start,end:Math.max(l.end,n.end),text:l.text+' '+n.text,words:(l.words||[]).concat(n.words||[])});ST.linesEdited=true});
+ else if(a==='split'){const p=lineSplit(l);if(!p)return toast('Essa frase tem uma palavra só: não dá para dividir.',true);mutate(()=>{ST.lines.splice(i,1,p[0],p[1]);ST.linesEdited=true})}
+ txtRender()});
+$('txtGo').onclick=async()=>{$('txtGo').disabled=true;try{await txtApply()}finally{$('txtGo').disabled=false}};
+$('txtDone').onclick=()=>$('textDialog').close();
+$('txtFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(f.size>400000)return toast('Arquivo grande demais para legenda (limite 400 KB).',true);const txt=await f.text();
+ if(/\.txt$/i.test(f.name)||!/\.(srt|vtt|ass|ssa)$/i.test(f.name)){$('txtIn').value=txt.slice(0,20000);return}
+ try{const r=await api('/api/captions/from-file',{id:ST.id,name:f.name,content:txt,relative:$('txtRel').checked});mutate(()=>{ST.lines=r.lines;ST.linesEdited=true;ST.edit=-1});TX.applied=true;txtShow(r)}catch(err){toast(err.message,true)}};
+/* ── marcar o início de cada frase ao tocar ── */
+async function txtTapStart(){
+ if(!txtText().trim())return toast('Cole ou digite o texto da legenda.',true);
+ try{const r=await api('/api/captions/from-text',{id:ST.id,text:txtText(),taps:[]});TX.phr=r.lines.map(l=>l.text)}catch(e){return toast(e.message,true)}
+ TX.tp=[];TX.on=true;$('textDialog').close();tapDraw();seekClip(0);const v=V();if(v&&v.paused)$('stPlay').click()}
+$('txtTap').onclick=txtTapStart;
+function tapDraw(){const el=$('tapBar'),k=TX.tp.length,n=TX.phr.length;el.classList.toggle('hide',!TX.on);if(!TX.on)return;
+ el.innerHTML=`<div class="muted small">Marcando o início das frases · ${Math.min(k+1,n)} de ${n} · só o início (o fim vem da pausa seguinte)</div><div class="ph">${esc(TX.phr[Math.min(k,n-1)]||'')}</div><div class="row"><button class="primary small" id="tapNow">Marcar agora (Enter)</button><button class="small" id="tapBack">Voltar uma (Backspace)</button><button class="small quiet" id="tapEnd">Terminar (Esc)</button></div>`}
+function tapMark(){if(!TX.on)return;TX.tp.push(r2(curClip()));if(TX.tp.length>=TX.phr.length)tapFinish();else tapDraw()}
+function tapBack(){if(TX.tp.length){TX.tp.pop();tapDraw()}}
+async function tapFinish(){if(!TX.on)return;const taps=TX.tp.slice();TX.on=false;tapDraw();const v=V();if(v&&!v.paused)$('stPlay').click();
+ if(!taps.length){openTextCaps();return}
+ const r=await txtApply(taps);openTextCaps();if(r)txtShow(r)}
+function tapKey(e){if(e.key==='Enter'){e.preventDefault();tapMark()}else if(e.key==='Backspace'){e.preventDefault();tapBack()}else if(e.key==='Escape'){e.preventDefault();tapFinish()}else if(e.key===' '){e.preventDefault()}}
+$('tapBar').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;if(t.id==='tapNow')tapMark();else if(t.id==='tapBack')tapBack();else if(t.id==='tapEnd')tapFinish()});
+/* ── arrastar os blocos de fala na linha do tempo (mover / ajustar início e fim); as palavras acompanham ── */
+$('tlScroll').addEventListener('pointerdown',e=>{
+ const b=e.target.closest('.blk.speech[data-line]');if(!b||e.button)return;e.stopImmediatePropagation();
+ const i=+b.dataset.line,l=ST.lines[i];if(!l)return;const orig=JSON.parse(JSON.stringify(l)),t0=T_(tlX(e)),mode=e.target.classList.contains('l')?'l':e.target.classList.contains('r')?'r':'m',q=v=>Math.round(v*20)/20;
+ ST.undo.push(snap());ST.redo=[];let moved=false;
+ const move=ev=>{const dt=T_(tlX(ev))-t0;if(Math.abs(dt)>.02)moved=true;if(!moved)return;const sn=v=>{if(ev.altKey){SNAP.hit=null;return v}return snapTo(v,null)};
+  let a=orig.start,z=orig.end;
+  if(mode==='m'){const L=z-a;a=clamp(sn(q(a+dt)),0,dur()-L);z=a+L}else if(mode==='l')a=clamp(sn(q(a+dt)),0,z-.2);else z=clamp(sn(q(z+dt)),a+.2,dur());
+  const k=(z-a)/Math.max(.01,orig.end-orig.start);l.start=r2(a);l.end=r2(z);
+  (l.words||[]).forEach((w,j)=>{const o=orig.words[j];w.start=r2(a+(o.start-orig.start)*k);w.end=r2(a+(o.end-orig.start)*k)});
+  b.style.left=X(l.start)+'px';b.style.width=Math.max(6,X(l.end-l.start))+'px';paintGuide()};
+ const up=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);SNAP.hit=null;
+  if(moved){ST.linesEdited=true;ST.lines.sort((x,y)=>x.start-y.start);changed();drawAll()}else{ST.undo.pop();seekClip(l.start)}};
+ document.addEventListener('pointermove',move);document.addEventListener('pointerup',up);e.preventDefault()},true);
 
 /* ───── ajustes: seções, agentes, marca, áudio, CSV e diagnóstico ───── */
 const ico=n=>`<svg class="i"><use href="#i-${n}"/></svg>`;

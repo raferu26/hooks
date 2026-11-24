@@ -398,3 +398,14 @@ dialog.cmd{width:min(560px,94vw);margin-top:12vh;overflow:hidden}
 .cmd-foot{padding:8px 16px;border-top:1px solid var(--line)}
 .snapguide{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--aqua);box-shadow:0 0 8px var(--aqua);pointer-events:none;z-index:7;display:none}
 /* classes t-big/t-bar/t-top: a classe `bar` colidia com a barra de progresso global (.bar) e achatava o título em faixa */
+/* Legenda por texto (sem IA) */
+.btnlike{display:inline-flex;align-items:center;min-height:var(--tap);padding:5px 10px;border:1px solid var(--line2);border-radius:7px;background:var(--panel2);cursor:pointer}
+#txtIn{width:100%;resize:vertical}
+#txtRes .item{display:flex;gap:10px;align-items:center;padding:4px 0}
+#txtRes input[type=number]{width:78px;flex:none}
+#txtRes input[type=text]{min-width:0}
+#txtRes{max-height:34vh;overflow:auto}
+#txtWarn .banner{margin:4px 0}
+.tapbar{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;z-index:30;background:var(--panel);border:1px solid var(--accent);border-radius:12px;padding:10px 14px;display:grid;gap:6px;min-width:300px;max-width:560px;box-shadow:0 10px 40px #000c}
+.tapbar .ph{font-size:var(--fs-lg);font-weight:650}
+.blk.speech .h{width:6px}

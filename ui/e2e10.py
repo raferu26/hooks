@@ -247,6 +247,74 @@ with sync_playwright() as p:
     import importlib.util as _iu
     _sp = _iu.spec_from_file_location('legenda_fidelidade', os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'validacao', 'legenda_fidelidade.py'))
     _lf = _iu.module_from_spec(_sp); _sp.loader.exec_module(_lf)
+    # legenda a partir de texto (sem IA): distribuir, corrigir início, arrastar bloco, marcar toques
+    pg3 = b.new_page(viewport={'width': 1440, 'height': 900}); pg3.goto(f'http://127.0.0.1:{PORT}/'); pg3.wait_for_timeout(1500)
+    pg3.click('[data-clip]')
+    for _ in range(150):
+        if pg3.evaluate("typeof ST!=='undefined'&&ST.open&&!!ST.data&&ST.data.preview.available"): break
+        pg3.wait_for_timeout(200)
+    pg3.wait_for_timeout(500)
+    pg3.keyboard.press('Control+k'); pg3.keyboard.type('colar texto'); pg3.keyboard.press('Enter'); pg3.wait_for_timeout(300)
+    check('texto_abre_pelo_ctrl_k', pg3.evaluate("document.getElementById('textDialog').open"))
+    check('texto_avisa_que_nao_e_transcricao', pg3.evaluate("/não ouve/.test(document.getElementById('textDialog').textContent)&&/estimados/.test(document.getElementById('textDialog').textContent)"))
+    pg3.fill('#txtIn', 'Primeira frase da legenda\nSegunda frase vem depois\nTerceira frase fecha o trecho')
+    pg3.click('#txtGo')
+    for _ in range(50):
+        if pg3.evaluate("ST.lines.length===3&&ST.linesEdited"): break
+        pg3.wait_for_timeout(100)
+    check('texto_distribui_3_frases', pg3.evaluate("ST.lines.length===3&&ST.linesEdited&&ST.lines.every(l=>l.words.length>0)"))
+    check('texto_mostra_tempos_estimados', pg3.evaluate("document.querySelectorAll('#txtRes [data-i]').length===3&&/ESTIMADOS/.test(document.getElementById('txtNote').textContent)"))
+    s0 = pg3.evaluate("ST.lines[0].start")
+    pg3.fill('#txtRes [data-i=\"0\"] input[data-f=start]', '1.5'); pg3.dispatch_event('#txtRes [data-i=\"0\"] input[data-f=start]', 'change'); pg3.wait_for_timeout(200)
+    check('texto_corrige_inicio_na_lista', abs(pg3.evaluate("ST.lines[0].start") - 1.5) < .01 and pg3.evaluate("Math.abs(ST.lines[0].words[0].start-ST.lines[0].start)<.6"), pg3.evaluate("ST.lines[0]"))
+    pg3.click('#txtDone'); pg3.wait_for_timeout(150)
+    pg3.keyboard.press('Control+z'); pg3.wait_for_timeout(200)
+    check('texto_desfazer_correcao', abs(pg3.evaluate("ST.lines[0].start") - s0) < .01)
+    # arrastar o bloco da 2ª frase na linha do tempo: a frase e as palavras andam juntas
+    bx = pg3.evaluate("(()=>{const b=document.querySelector('.blk.speech[data-line=\"1\"]').getBoundingClientRect();return [b.left+b.width/2,b.top+b.height/2]})()")
+    l1 = pg3.evaluate("[ST.lines[1].start,ST.lines[1].words[0].start-ST.lines[1].start]")
+    pg3.mouse.move(bx[0], bx[1]); pg3.mouse.down(); pg3.mouse.move(bx[0] - 60, bx[1], steps=6); pg3.mouse.up(); pg3.wait_for_timeout(250)
+    l1b = pg3.evaluate("[ST.lines[1].start,ST.lines[1].words[0].start-ST.lines[1].start]")
+    check('bloco_de_fala_arrasta', abs(l1b[0] - l1[0]) > .2 and abs(l1b[1] - l1[1]) < .02, [l1, l1b])
+    pg3.keyboard.press('Control+z'); pg3.wait_for_timeout(200)
+    # edição individual das frases na lista: fim, texto, dividir, unir, excluir; tudo desfaz
+    pg3.keyboard.press('Control+k'); pg3.keyboard.type('colar texto'); pg3.keyboard.press('Enter'); pg3.wait_for_timeout(250)
+    pg3.evaluate("txtRender()")
+    n0 = pg3.evaluate("ST.lines.length"); e0 = pg3.evaluate("ST.lines[0].end")
+    pg3.fill('#txtRes [data-i=\"0\"] input[data-f=end]', str(round(e0 + .5, 2))); pg3.dispatch_event('#txtRes [data-i=\"0\"] input[data-f=end]', 'change'); pg3.wait_for_timeout(150)
+    check('frase_ajusta_fim', abs(pg3.evaluate("ST.lines[0].end") - (e0 + .5)) < .02 and pg3.evaluate("Math.abs(ST.lines[0].words[ST.lines[0].words.length-1].end-ST.lines[0].end)<.05"), pg3.evaluate("ST.lines[0].end"))
+    pg3.fill('#txtRes [data-i=\"1\"] input[data-f=text]', 'Texto corrigido da segunda'); pg3.dispatch_event('#txtRes [data-i=\"1\"] input[data-f=text]', 'change'); pg3.wait_for_timeout(150)
+    check('frase_corrige_texto', pg3.evaluate("ST.lines[1].text==='Texto corrigido da segunda'&&ST.lines[1].words.length===4"))
+    pg3.click('#txtRes [data-i=\"1\"] button[data-a=split]'); pg3.wait_for_timeout(150)
+    check('frase_divide', pg3.evaluate("ST.lines.length")==n0+1 and pg3.evaluate("ST.lines[1].end<=ST.lines[2].start+.01"))
+    pg3.click('#txtRes [data-i=\"1\"] button[data-a=merge]'); pg3.wait_for_timeout(150)
+    check('frase_une', pg3.evaluate("ST.lines.length")==n0 and pg3.evaluate("ST.lines[1].text")=='Texto corrigido da segunda')
+    pg3.click('#txtRes [data-i=\"2\"] button[data-a=del]'); pg3.wait_for_timeout(150)
+    check('frase_exclui', pg3.evaluate("ST.lines.length")==n0-1)
+    pg3.click('#txtDone'); pg3.wait_for_timeout(100)
+    for _ in range(5): pg3.keyboard.press('Control+z'); pg3.wait_for_timeout(120)
+    check('frases_desfazer_tudo', pg3.evaluate("ST.lines.length")==n0 and abs(pg3.evaluate("ST.lines[0].end")-e0)<.02, pg3.evaluate("ST.lines.length"))
+    # importar legenda pronta (SRT): tempos do arquivo, sem estimativa
+    srt = os.path.join(OUT, 'teste.srt'); open(srt, 'w', encoding='utf-8').write('1\n00:00:01,000 --> 00:00:03,500\nOlá, esta veio do arquivo\n\n2\n00:00:04,000 --> 00:00:07,000\nSegunda fala do arquivo\n')
+    pg3.keyboard.press('Control+k'); pg3.keyboard.type('colar texto'); pg3.keyboard.press('Enter'); pg3.wait_for_timeout(250)
+    pg3.check('#txtRel'); pg3.set_input_files('#txtFile', srt); pg3.wait_for_timeout(800)
+    check('srt_importa_com_tempos_do_arquivo', pg3.evaluate("ST.lines.length===2&&Math.abs(ST.lines[0].start-1)<.01&&Math.abs(ST.lines[0].end-3.5)<.01&&ST.linesEdited"), pg3.evaluate("ST.lines.map(l=>[l.start,l.end])"))
+    check('srt_rotula_tempos_importados', pg3.evaluate("/IMPORTADOS/.test(document.getElementById('txtNote').textContent)"))
+    pg3.click('#txtDone'); pg3.keyboard.press('Control+z'); pg3.wait_for_timeout(200)
+    # marcar o início das frases ao tocar (Enter), 3 toques
+    pg3.keyboard.press('Control+k'); pg3.keyboard.type('colar texto'); pg3.keyboard.press('Enter'); pg3.wait_for_timeout(250)
+    pg3.click('#txtTap'); pg3.wait_for_timeout(600)
+    check('toques_barra_aparece', pg3.evaluate("TX.on&&!document.getElementById('tapBar').classList.contains('hide')&&TX.phr.length===3"))
+    for k in range(3):
+        pg3.keyboard.press('Enter'); pg3.wait_for_timeout(900)
+    for _ in range(60):
+        if pg3.evaluate("!TX.on&&document.getElementById('textDialog').open"): break
+        pg3.wait_for_timeout(100)
+    tp = pg3.evaluate("TX.tp"); st = pg3.evaluate("ST.lines.map(l=>l.start)")
+    check('toques_gravou_3', len(tp) == 3 and all(b > a for a, b in zip(tp, tp[1:])), tp)
+    check('toques_fixam_o_inicio_das_frases', len(st) == 3 and all(abs(a - b) < .06 for a, b in zip(tp, st)), [tp, st])
+    check('toques_rotula_como_marcado_por_voce', pg3.evaluate("/marcado por você/.test(document.getElementById('txtNote').textContent)"))
+    pg3.close()
     pg2 = b.new_page(viewport={'width': 1440, 'height': 900}); pg2.goto(f'http://127.0.0.1:{PORT}/'); pg2.wait_for_timeout(1500)
     pg2.click('[data-clip]')
     for _ in range(150):
