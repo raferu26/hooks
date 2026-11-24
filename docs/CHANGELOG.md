@@ -1,6 +1,15 @@
 # CHANGELOG (a partir da migração para o Claude Code)
 Histórico anterior à migração é **herdado e não reverificado**: ver `docs/handoff/HOOKS_HISTORY_AND_DECISIONS.md`. Aqui só entra o que foi feito e verificado neste repositório.
 
+## [Layout de reação — composição de webcam e conteúdo] — 24/11/2026 (branch `feature/layout-reacoes`)
+- **ANTES:** converter um vídeo de reação horizontal para 9:16 só oferecia "Vídeo inteiro" / "Preencher". A webcam do streamer podia sair do quadro (ouve-se a voz, não se vê a reação) e não havia como combinar duas regiões do mesmo vídeo.
+- **PROBLEMA:** sem composição de regiões; sem escolher a webcam no vídeo original; sem layouts por trecho.
+- **ALTERAÇÃO:** motor `liveclips/composition.py` (regiões → layouts → filtergraph, um só `resolve()` para prévia e exportação), 8 layouts como presets parametrizados, seletor de regiões no quadro ORIGINAL, prévia imediata, presets locais, aplicar a vários cortes, cenas por intervalo (timeline, corte direto/suave, acompanham cortes/velocidade/replays/abertura), áreas ocultas manuais, sugestões determinísticas (conteúdo parado + webcam em movimento), `probe()` com rotação e SAR. Detalhes: `docs/COMPOSICAO_REACAO.md`.
+- **TESTE:** `tests/test_composicao*.py`, `test_reacao_sugestoes.py` (pixels do FFmpeg × plano nos 8 layouts; troca de cena exata no quadro, sem perder/duplicar quadros; rampa da transição monotônica; exportação real com corte + cena + legenda; 1 só trilha de áudio), e2e `ui/e2e_reacao.py` (28 verificações incl. persistência e undo/redo), e2e10 sem regressões.
+- **MEDIDO (1080p30, 20 s sintéticos, 4 CPUs, Linux; mediana de 3; `validacao/bench_composicao.py`):** exportação referência 18,3 s → composição 12,3 s (2 cenas 17,0 s); rascunho (prévia) referência 6,3 s → composição 6,9 s (2 cenas 12,1 s). RAM de pico (FFmpeg): 725 MB (2 cenas 979 MB). Cálculo de camadas 0,015 ms; montagem do filtergraph 0,18 ms.
+- **ACHADO E CORREÇÃO DURANTE O DESENVOLVIMENTO:** a 1ª versão do fundo sólido (`drawbox` em quadro cheio) e `overlay format=auto` deixavam o rascunho em 21 s (3,3× a referência). Medido por ablação; trocado por fundo via tabela de cores 2×2 + `overlay format=yuv420`, e fundo desfocado em 1/4 de resolução: rascunho 21 s → 6,9 s; cinema/blur final 28 s → 12 s.
+- **Não validado:** Windows, GPU, vídeo real Coringa/Caiox, usabilidade com pessoas, fonte de webcam separada (não implementada), prévia imediata × vídeo no navegador real do Windows. Ver `docs/COMPOSICAO_REACAO.md` (limitações).
+
 ## [Linha de base] — 23/11/2026
 - **Ponto de recuperação:** commit `dc8e371` / tag `baseline-0.19.0-beta.1` = ZIP recebido sem alterações. ZIPs originais com SHA-256 em `../_recovery/`.
 - **Adicionado:** `ui/` (fontes da UI, build reproduzível byte a byte, scripts sem caminhos absolutos); `CLAUDE.md`; `docs/*`; `validacao/bench_ui.py`; `requirements-dev.txt`; variante `HOOKS_SEED_LONG` no `ui/seed.py`.

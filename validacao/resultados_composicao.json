@@ -4,94 +4,94 @@
   "cpu_count": 4,
   "runs": {
     "final/referencia": {
-      "median_seconds": 18.94,
-      "max_rss_mb": 728,
+      "median_seconds": 18.27,
+      "max_rss_mb": 734,
       "size_mb": 7.1,
       "all_seconds": [
-        18.94,
-        19.13,
-        18.94
+        18.27,
+        18.15,
+        19.2
       ],
       "errors": []
     },
     "final/composicao": {
-      "median_seconds": 23.93,
-      "max_rss_mb": 730,
+      "median_seconds": 12.27,
+      "max_rss_mb": 725,
       "size_mb": 4.19,
       "all_seconds": [
-        22.89,
-        23.93,
-        24.64
+        12.27,
+        11.81,
+        12.64
       ],
       "errors": []
     },
     "final/composicao_2_cenas": {
-      "median_seconds": 30.76,
-      "max_rss_mb": 1075,
-      "size_mb": 3.9,
+      "median_seconds": 17.03,
+      "max_rss_mb": 979,
+      "size_mb": 3.89,
       "all_seconds": [
-        30.76,
-        30.37,
-        31.3
+        17.12,
+        16.67,
+        17.03
       ],
       "errors": []
     },
     "final/composicao_blur_cinema": {
-      "median_seconds": 28.31,
-      "max_rss_mb": 758,
+      "median_seconds": 12.35,
+      "max_rss_mb": 723,
       "size_mb": 4.12,
       "all_seconds": [
-        28.31,
-        28.22,
-        28.52
+        12.59,
+        11.67,
+        12.35
       ],
       "errors": []
     },
     "draft/referencia": {
-      "median_seconds": 6.88,
-      "max_rss_mb": 264,
+      "median_seconds": 6.28,
+      "max_rss_mb": 263,
       "size_mb": 1.98,
       "all_seconds": [
-        6.88,
-        7.01,
-        6.78
+        6.34,
+        6.28,
+        6.25
       ],
       "errors": []
     },
     "draft/composicao": {
-      "median_seconds": 20.97,
-      "max_rss_mb": 292,
+      "median_seconds": 6.89,
+      "max_rss_mb": 280,
       "size_mb": 2.11,
       "all_seconds": [
-        21.06,
-        20.91,
-        20.97
+        6.17,
+        6.89,
+        7.38
       ],
       "errors": []
     },
     "draft/composicao_2_cenas": {
-      "median_seconds": 23.84,
-      "max_rss_mb": 600,
+      "median_seconds": 12.08,
+      "max_rss_mb": 517,
       "size_mb": 1.96,
       "all_seconds": [
-        23.94,
-        23.25,
-        23.84
+        12.08,
+        12.04,
+        12.08
       ],
       "errors": []
     },
     "draft/composicao_blur_cinema": {
-      "median_seconds": 11.47,
-      "max_rss_mb": 285,
-      "size_mb": 2.25,
+      "median_seconds": 7.67,
+      "max_rss_mb": 278,
+      "size_mb": 2.24,
       "all_seconds": [
-        11.47,
-        11.56,
-        11.45
+        8.12,
+        7.67,
+        7.46
       ],
       "errors": []
     }
   },
-  "resolve_ms": 0.013,
-  "graph_build_ms": 0.162
+  "resolve_ms": 0.015,
+  "graph_build_ms": 0.181
 }

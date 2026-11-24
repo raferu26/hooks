@@ -15,3 +15,11 @@ Só entram itens **verificados nesta migração**. Pendências de validação f�
 | KI-10 | M | Sem `cv2` o app não avisa: capa, correção de gamma e rastreio simplesmente não acontecem (testes revelaram) | rodar `tests.test_grade tests.test_multiformat` sem OpenCV | `cover.py`, `grade.py`, `track.py` | Importação protegida sem aviso ao usuário | **Corrigido** (`deps.py`, banner, pré-checagem) | `test_grade`, `test_multiformat` |
 | KI-11 | M | Padrão `voice_preset='off'` deixa volume menos consistente entre falas (VOL σ 2,8 dB; `natural` 1,0 dB) | `python3 validacao/medir_audio.py` | `store.py` (perfil), `media.py` (`VOICE_PRESETS`) | Padrão conservador | Decisão pendente (Rafael) | `test_audio_dsp` (parcial) |
 | KI-12 | M | Legenda ao vivo ≠ exportação fora do estilo padrão: resíduo de tamanho até ±11% (minimal 1,10; impact 0,89) e **quebra em blocos** (impact: 3 palavras; box: 24 caracteres) só na exportação | `ESTILOS=dynamic,clean,bold,minimal,impact,pop,box PORT=8790 python3 validacao/legenda_fidelidade.py` | `ui/live.js`, `ui/style.css`, `liveclips/captions.py` | CSS ≠ libass; chunking só no ASS | **Corrigido** (blocos, 7 estilos e títulos; ver CHANGELOG) | e2e `legenda_*` (só dynamic) |
+
+## Layout de reação (branch `feature/layout-reacoes`) — abertos
+- **KI-R1** Webcam em arquivo separado / escolha e deslocamento de áudio: não implementado.
+- **KI-R2** Zoom automático desligado com composição ativa; variantes 1:1/4:5/16:9 ignoram a composição; plano B ("legacy") ignora (registra `composition_skipped`).
+- **KI-R3** Cantos arredondados e arrasto direto da janela flutuante na prévia: não implementados (posição por sliders).
+- **KI-R4** Cena que usa região não marcada é ignorada (aviso). Sobreposição de cenas: o salvamento é recusado com mensagem.
+- **KI-R5** Prévia imediata (canvas) não tem a nitidez do FFmpeg (serve para posicionar). Teste headless não exibe o `<video>` da prévia (decodificação H.264 do Chrome do ambiente), então a prévia em vídeo foi verificada extraindo quadros do arquivo gerado.
+- **KI-R6** Tudo acima só testado no Linux com mídia sintética; Windows/GPU/vídeo real pendentes.
