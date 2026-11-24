@@ -3,7 +3,7 @@
    Coordenadas das regiões: frações 0–1 do quadro de exibição da fonte (origem no canto superior esquerdo).
    Transformação do seletor: ponteiro (px da tela) → retângulo da <img> (getBoundingClientRect) → fração 0–1 → região salva
    → crop em pixels da fonte (servidor) → filtro crop= do FFmpeg. A <img> não tem letterbox, então a fração é direta. */
-const RX={plan:null,key:'',frameImg:null,frameKey:'',picker:null,more:false,busy:0,t:null};
+const RX={presets:null,presetSel:'',applyOpen:false,applyPick:{},plan:null,key:'',frameImg:null,frameKey:'',picker:null,more:false,busy:0,t:null};
 const RX_COLORS={webcam:'#35d0ba',conteudo:'#4f9bff',webcam2:'#f5a524'};
 const RX_ROLE={webcam:'Webcam',conteudo:'Conteúdo',webcam2:'Webcam 2'};
 const RX_DIAG={
@@ -36,6 +36,7 @@ function reacaoHtml(d,P){const cat=rxCat(),c=P.composition,main=cat.layouts.filt
  const moreOpen=RX.more||(c&&more.some(l=>l.id===c.layout));
  h+=`<div class="row"><button class="small quiet" data-rx="more" aria-expanded="${moreOpen}">${moreOpen?'Menos layouts':'Mais layouts'}</button></div>`;
  if(moreOpen)h+=`<div class="layout-grid">${more.map(l=>rxCard(l,c&&c.layout===l.id)).join('')}</div>`;
+ h+=rxPresetsHtml(c);
  if(!c)return h+`<p class="help">Escolha um modelo para começar. Depois você marca a webcam e o conteúdo direto no vídeo.</p>`;
  const lay=rxLayout(c.layout),p=rxParams(c),miss=rxMissing(c);
  h+=`<p class="help">${esc(lay.hint)}</p>`;
@@ -55,7 +56,20 @@ function reacaoHtml(d,P){const cat=rxCat(),c=P.composition,main=cat.layouts.filt
  if(lay.roles.includes('conteudo'))h+=rxFitBlock(c,p,'content','Conteúdo');
  h+=`<div class="fld"><label>Fundo (onde sobra espaço)</label><select data-rxf="bg" data-t="str">${[['black','Preto'],['color','Cor sólida'],['blur','Desfocado (do próprio vídeo)']].map(([k,t])=>`<option value="${k}" ${p.bg===k?'selected':''}>${t}</option>`).join('')}</select></div>`;
  if(p.bg==='color')h+=`<div class="fld"><label>Cor do fundo</label><input type="color" data-rxf="bg_color" data-t="str" value="${p.bg_color}"></div>`;
+ h+=rxApplyHtml();
  return h+`<p class="help">A prévia acima usa um quadro do vídeo e as mesmas regras da exportação. A prévia em vídeo (P) mostra o resultado real.</p>`+rxRemove()}
+function rxPresetsHtml(c){const L=RX.presets;if(!L)return '';const sel=L.find(p=>p.id===RX.presetSel);
+ let h=`<h4 aria-level="3">Meus layouts</h4><div class="row"><select id="rxPreset" class="grow" aria-label="Layouts salvos"><option value="">Escolher…</option>${L.map(p=>`<option value="${esc(p.id)}" ${p.id===RX.presetSel?'selected':''}>${esc(p.name)}${p.has_regions?(p.compatible?' · com regiões':' · regiões de outro formato'):''}</option>`).join('')}</select><button class="small" data-rx="preset-apply" ${sel?'':'disabled'}>Aplicar</button></div>`;
+ if(sel&&!sel.builtin)h+=`<div class="row"><button class="small quiet" data-rx="preset-rename">Renomear</button><button class="small quiet" data-rx="preset-dup">Duplicar</button><button class="small quiet danger" data-rx="preset-del">Excluir</button></div>`;
+ if(c)h+=`<div class="row"><input id="rxPresetName" class="grow" type="text" maxlength="60" placeholder="Nome do layout" aria-label="Nome do layout"><button class="small" data-rx="preset-save">Salvar atual</button></div><label class="switch"><input type="checkbox" id="rxPresetRegions"><span>Guardar também as regiões marcadas<small>Só será reaproveitado em vídeos com a mesma proporção.</small></span></label>`;
+ return h}
+function rxApplyHtml(){const me=state.candidates.find(x=>x.id===ST.id);if(!me)return '';const others=state.candidates.filter(x=>x.session===me.session&&x.id!==ST.id&&!['exporting','done','replaced'].includes(x.status));
+ if(!others.length)return '';
+ let h=`<div class="row"><button class="small" data-rx="apply-toggle" aria-expanded="${RX.applyOpen}">Aplicar a outros cortes…</button></div>`;
+ if(RX.applyOpen)h+=`<div class="list">${others.slice(0,40).map(x=>`<label class="switch"><input type="checkbox" data-rxa="${esc(x.id)}" ${RX.applyPick[x.id]?'checked':''}><span>${clock(x.start,1)}–${clock(x.end,1)}<small>${esc((x.title||x.hook||'').toString().slice(0,60))}</small></span></label>`).join('')}</div><div class="row"><button class="small" data-rx="apply-sel">Aplicar nos marcados</button><button class="small primary" data-rx="apply-all">Aplicar em todos (${others.length})</button></div><p class="help">Cortes já exportados não são alterados. Se a proporção do vídeo for diferente, as regiões não são copiadas.</p>`;
+ return h}
+async function rxLoadPresets(){try{RX.presets=(await api('/api/composition/presets',{action:'list',id:ST.id})).presets;drawRight()}catch(e){RX.presets=[]}}
+async function rxPresetCall(body){try{RX.presets=(await api('/api/composition/presets',Object.assign({id:ST.id},body))).presets;drawRight();return true}catch(e){toast(e.message,true);return false}}
 function rxRemove(){return `<div><button class="small quiet danger" data-rx="remove">Voltar ao enquadramento padrão</button></div>`}
 
 /* ───────── prévia imediata (canvas) ───────── */
@@ -138,11 +152,26 @@ $('stRight').addEventListener('click',e=>{const t=e.target;
  const a=t.closest('[data-rx]');if(a){const k=a.dataset.rx;
   if(k==='more'){RX.more=!RX.more;drawRight()}
   else if(k==='remove')mutate(()=>{ST.proj.composition=null});
-  else if(k.startsWith('pick:'))rxOpenPicker(k.slice(5))}
+  else if(k.startsWith('pick:'))rxOpenPicker(k.slice(5))
+  else if(k==='preset-apply'){const p=(RX.presets||[]).find(x=>x.id===RX.presetSel);if(!p)return;
+   mutate(()=>{const old=ST.proj.composition,keep=p.has_regions&&p.compatible?p.regions:(old?old.regions:{});ST.proj.composition={version:1,layout:p.layout,regions:keep||{},params:Object.assign({},p.params)}});
+   if(p.has_regions&&!p.compatible)toast('Este layout foi salvo com regiões de um vídeo de outra proporção: só o modelo e os ajustes foram aplicados. Marque as regiões.',false);
+   const next=rxMissing(rxComp())[0];if(next)setTimeout(()=>rxOpenPicker(next),50)}
+  else if(k==='preset-save'){const n=$('rxPresetName').value;rxPresetCall({action:'save',name:n,composition:ST.proj.composition,with_regions:$('rxPresetRegions').checked}).then(ok=>{if(ok)toast('Layout salvo.')})}
+  else if(k==='preset-rename'){const n=($('rxPresetName')&&$('rxPresetName').value)||'';if(!n)return toast('Digite o novo nome no campo “Nome do layout”.',true);rxPresetCall({action:'rename',preset:RX.presetSel,name:n})}
+  else if(k==='preset-dup')rxPresetCall({action:'duplicate',preset:RX.presetSel})
+  else if(k==='preset-del'){if(confirm('Excluir este layout salvo? As composições já aplicadas nos cortes não mudam.'))rxPresetCall({action:'delete',preset:RX.presetSel}).then(()=>{RX.presetSel=''})}
+  else if(k==='apply-toggle'){RX.applyOpen=!RX.applyOpen;drawRight()}
+  else if(k==='apply-sel'||k==='apply-all'){const me=state.candidates.find(x=>x.id===ST.id);const ids=k==='apply-all'?'session':Object.keys(RX.applyPick).filter(i=>RX.applyPick[i]);if(k==='apply-sel'&&!ids.length)return toast('Marque os cortes.',true);
+   (async()=>{try{if(ST.dirty)await persist({learn:false,preview:false,force:true});const r=await api('/api/composition/apply',{id:ST.id,composition:ST.proj.composition,targets:ids});await refresh(true);
+    toast(`Aplicado em ${r.applied.length} corte${r.applied.length===1?'':'s'}.`+(r.skipped.length?` ${r.skipped.length} pulado${r.skipped.length===1?'':'s'}: ${r.skipped[0].reason}.`:''),!r.applied.length)}catch(e){toast(e.message,true)}})()}}
  const f=t.closest('[data-rxfit]');if(f){const [pre,fit]=f.dataset.rxfit.split(':');rxSetParam(pre+'_fit',fit)}},true);
-$('stRight').addEventListener('change',e=>{const t=e.target,k=t.dataset.rxf;if(!k)return;e.stopImmediatePropagation();
+$('stRight').addEventListener('change',e=>{const t=e.target;
+ if(t.id==='rxPreset'){RX.presetSel=t.value;e.stopImmediatePropagation();drawRight();return}
+ if(t.dataset.rxa!==undefined){RX.applyPick[t.dataset.rxa]=t.checked;e.stopImmediatePropagation();return}
+ const k=t.dataset.rxf;if(!k)return;e.stopImmediatePropagation();
  let v=t.type==='checkbox'?t.checked:t.value;if(t.dataset.t==='num')v=+v;if(k==='gap'||k==='pip_border')v=Math.round(v);
  const c=ST.proj.composition;if(c&&c.params&&c.params[k]===v)return;rxSetParam(k,v)},true);
 $('stRight').addEventListener('input',e=>{const k=e.target.dataset.rxf;if(!k||e.target.type!=='range')return;const o=$('stRight').querySelector(`[data-out="rx.${k}"]`);
  if(o){const v=+e.target.value;o.textContent=k==='gap'||k==='pip_border'?v+' px':k.endsWith('_zoom')?v.toFixed(2)+'×':Math.round(v*100)+'%'}},true);
-const rxDrawRight=drawRight;drawRight=function(){rxDrawRight();rxAfterDraw()};
+const rxDrawRight=drawRight;drawRight=function(){rxDrawRight();rxAfterDraw();if(RX.presetsFor!==ST.id){RX.presets=null;RX.presetsFor=ST.id;RX.presetSel=''}if(RX.presets===null&&ST.open&&ST.secs.has('frame')){RX.presets=[];rxLoadPresets()}};
