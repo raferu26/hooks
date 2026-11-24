@@ -18,3 +18,11 @@
 
 ## O que ainda depende de modelos de IA na versão de referência (não incluído aqui)
 faster-whisper (transcrição), MediaPipe (movimento facial e webcam automática), RNNoise (opcional), Ollama (opcional). Plano de remoção: `docs/SEM_IA_MIGRACAO.md` do repositório.
+
+## Layout de reação (novo na 0.20.0-beta.2, experimental)
+- Testado só em Linux, com mídia sintética. **Não** foi testado com o vídeo real de reação (Coringa/Caiox), no Windows, nem com GPU.
+- Webcam em **arquivo separado** e escolha/deslocamento de áudio: não existe ainda. As duas regiões vêm do mesmo vídeo.
+- Zoom automático fica desligado quando há composição; formatos 1:1, 4:5 e 16:9 não usam a composição (só 9:16).
+- As sugestões de troca de layout são **só movimento de pixels** (conteúdo parado + webcam se mexendo): não sabem se o vídeo foi pausado.
+- A prévia imediata (miniatura) serve para posicionar; a nitidez real é a da exportação.
+- Roteiro de teste: `ROTEIRO_LAYOUT_REACAO.md`. Detalhes técnicos: `docs/COMPOSICAO_REACAO.md`.

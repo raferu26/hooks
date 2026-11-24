@@ -59,3 +59,7 @@ python3 tools/empacotar_release.py --teste-sem-ia --wheels wheels --resultados T
 O ZIP traz: código, **`wheels/` offline** (33 arquivos, 85 MB), `INSTALAR_TESTE.bat` (instala sem baixar pacotes Python; o winget só instala Python 3.11/FFmpeg se faltarem), `AUTOTESTE.bat`, `MEDIR_DESEMPENHO.bat`, `COLETAR_RELATORIO.bat`, `VERIFICAR_PACOTE.bat`, `LEIA-ME_TESTE_WINDOWS.txt`, `CHECKLIST_W01_W10.md`, `REGISTRO_DE_PROBLEMAS.md`, `LIMITACOES.md`, `TESTES_REALIZADOS.md` e `MANIFESTO.sha256`.
 Verificações do empacotador (todas automáticas): ZIP íntegro; manifesto confere e cobre todos os arquivos; arquivos exigidos; `.bat` com CRLF; **nenhum wheel de IA**; todos os wheels servem para Windows 64 bits/Python 3.11; sem segredos/vídeos/banco; commit de 40 caracteres no `BUILD_INFO`.
 **Relatórios sem dados privados:** `COLETAR_RELATORIO.bat` junta diagnóstico (log, eventos, CPU/RAM/GPU, codificadores, versões de bibliotecas), autoteste, medição, log de instalação e o checklist, com usuário do Windows e tokens ocultados; nada é enviado pela rede e o ZIP fica em `RELATORIOS` para você conferir e enviar.
+
+
+## 8. Pacote de TESTE 0.20.0-beta.2 (layout de reação)
+Mesma variante sem IA da 0.20.0-beta.1, mais o **Layout de reação** (branch `feature/layout-reacoes`). Procedimento de instalação igual ao §7. Teste do recurso: `docs/WINDOWS_TESTE/ROTEIRO_LAYOUT_REACAO.md`. A 0.20.0-beta.1 já entregue permanece inalterada (outro commit, outro ZIP, outra pasta).
