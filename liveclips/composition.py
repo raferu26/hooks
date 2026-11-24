@@ -354,3 +354,113 @@ def summary(comp):
         return 'enquadramento padrão'
     state = 'completa' if is_ready(comp) else 'incompleta (faltam: ' + ', '.join(ROLE_LABELS[r] for r in missing_roles(comp)) + ')'
     return f'{LAYOUTS[comp["layout"]]["label"]} · {state}'
+
+
+# ───────────── presets reutilizáveis (arquivo local, sem banco nem rede) ─────────────
+
+PRESET_FILE = 'layouts_reacao.json'
+PRESET_LIMIT = 40
+ASPECT_TOLERANCE = .03          # regiões guardadas só se aplicam a fontes com proporção até 3% diferente
+BUILTIN = [
+    dict(id='b:reacao_pequena', name='Reação — webcam pequena', layout='cam_compacta'),
+    dict(id='b:reacao_grande', name='Reação — webcam grande', layout='cam_ampliada'),
+    dict(id='b:foco_streamer', name='Reação — foco no streamer', layout='foco_reacao'),
+    dict(id='b:gameplay', name='Gameplay — webcam flutuante', layout='cam_flutuante'),
+    dict(id='b:podcast', name='Podcast — duas pessoas', layout='dueto'),
+    dict(id='b:dupla', name='Dupla reação', layout='duas_cams'),
+    dict(id='b:cinema', name='Cinema YouTube', layout='cinema'),
+]
+
+
+def _load(root):
+    import json
+    from pathlib import Path
+    file = Path(root) / PRESET_FILE
+    try:
+        data = json.loads(file.read_text(encoding='utf-8'))
+        items = data.get('items') if isinstance(data, dict) else None
+        return [i for i in items if isinstance(i, dict) and i.get('id') and i.get('layout') in LAYOUTS] if isinstance(items, list) else []
+    except (OSError, ValueError):
+        return []
+
+
+def _store(root, items):
+    from pathlib import Path
+    from . import atomic
+    atomic.write_json(Path(root) / PRESET_FILE, dict(version=1, items=items))
+
+
+def compatible(item, source):
+    """As regiões guardadas fazem sentido para esta fonte? (proporção próxima; senão só layout e ajustes valem)."""
+    if not item.get('regions') or not item.get('source_aspect') or not source:
+        return False
+    return abs(source[0] / float(source[1]) / item['source_aspect'] - 1) <= ASPECT_TOLERANCE
+
+
+def list_presets(root, source=None):
+    out = [dict(item, builtin=True, regions=None, params=params_for(item['layout']), has_regions=False, compatible=False) for item in BUILTIN]
+    for item in _load(root):
+        out.append(dict(item, builtin=False, has_regions=bool(item.get('regions')), compatible=compatible(item, source)))
+    return out
+
+
+def _name(value):
+    name = ' '.join(str(value or '').split())[:60]
+    if not name:
+        raise ValueError('Dê um nome ao layout.')
+    return name
+
+
+def save_preset(root, name, comp, source=None, with_regions=False):
+    import time
+    import uuid
+    comp = clean(comp)
+    if not comp:
+        raise ValueError('Não há composição para salvar.')
+    items = _load(root)
+    name = _name(name)
+    if len(items) >= PRESET_LIMIT:
+        raise ValueError(f'Limite de {PRESET_LIMIT} layouts salvos. Exclua algum antes.')
+    if any(i['name'].lower() == name.lower() for i in items):
+        raise ValueError('Já existe um layout salvo com esse nome.')
+    item = dict(id=uuid.uuid4().hex[:12], name=name, layout=comp['layout'], params=comp['params'], created=int(time.time()),
+                regions=comp['regions'] if with_regions and comp['regions'] else None,
+                source_aspect=round(source[0] / float(source[1]), 4) if with_regions and source else None)
+    _store(root, items + [item])
+    return item
+
+
+def rename_preset(root, preset_id, name):
+    items, name = _load(root), _name(name)
+    if any(i['name'].lower() == name.lower() and i['id'] != preset_id for i in items):
+        raise ValueError('Já existe um layout salvo com esse nome.')
+    for item in items:
+        if item['id'] == preset_id:
+            item['name'] = name
+            _store(root, items)
+            return item
+    raise ValueError('Layout salvo não encontrado.')
+
+
+def duplicate_preset(root, preset_id):
+    import uuid
+    items = _load(root)
+    if len(items) >= PRESET_LIMIT:
+        raise ValueError(f'Limite de {PRESET_LIMIT} layouts salvos. Exclua algum antes.')
+    for item in items:
+        if item['id'] == preset_id:
+            taken = {i['name'].lower() for i in items}
+            name, n = item['name'] + ' (cópia)', 2
+            while name.lower() in taken:
+                name, n = f'{item["name"]} (cópia {n})', n + 1
+            copy = dict(item, id=uuid.uuid4().hex[:12], name=name[:60])
+            _store(root, items + [copy])
+            return copy
+    raise ValueError('Layout salvo não encontrado.')
+
+
+def delete_preset(root, preset_id):
+    items = _load(root)
+    if not any(i['id'] == preset_id for i in items):
+        raise ValueError('Layout salvo não encontrado.')
+    _store(root, [i for i in items if i['id'] != preset_id])

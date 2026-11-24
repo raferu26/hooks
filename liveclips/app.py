@@ -400,6 +400,8 @@ class App:
             if path=='/api/project/get':return self.project_get(payload['id'])
             if path=='/api/project/save':return self.project_save(payload)
             if path=='/api/composition/resolve':return self.composition_resolve(payload)
+            if path=='/api/composition/presets':return self.composition_presets(payload)
+            if path=='/api/composition/apply':return self.composition_apply(payload)
             if path=='/api/performance/save':
                 item=s.candidate(payload['id']);perf=s.save_performance(item['id'],payload)
                 return dict(performance=perf,summary=s.learning_summary(item['streamer']))
@@ -687,6 +689,43 @@ class App:
         item=self.store.candidate(payload['id']);SW,SH=self._source_dims(item)
         comp=composition.clean(payload.get('composition'))
         return dict(plan=composition.resolve(comp,SW,SH) if comp else None,source=[SW,SH],composition=comp,summary=composition.summary(comp))
+
+    def composition_presets(self,payload):
+        """Layouts de reação reutilizáveis (arquivo local). Ações: list, save, rename, duplicate, delete."""
+        from . import composition
+        root=self.store.root;action=payload.get('action','list');source=None
+        if payload.get('id'):source=self._source_dims(self.store.candidate(payload['id']))
+        if action=='save':composition.save_preset(root,payload.get('name'),payload.get('composition'),source,bool(payload.get('with_regions')))
+        elif action=='rename':composition.rename_preset(root,str(payload.get('preset')),payload.get('name'))
+        elif action=='duplicate':composition.duplicate_preset(root,str(payload.get('preset')))
+        elif action=='delete':composition.delete_preset(root,str(payload.get('preset')))
+        elif action!='list':raise ValueError('Ação inválida.')
+        return dict(presets=composition.list_presets(root,source))
+
+    def composition_apply(self,payload):
+        """Aplica a composição atual a outros cortes (os marcados ou todos da mesma sessão), sem tocar nos já exportados."""
+        from . import composition
+        s=self.store;origin=s.candidate(payload['id']);comp=composition.clean(payload.get('composition'))
+        if not comp:raise ValueError('Não há composição para aplicar.')
+        base=self._source_dims(origin)
+        ids=payload.get('targets')
+        if ids=='session':ids=[r['id'] for r in s.rows('SELECT id FROM candidates WHERE session=?',(origin['session'],))]
+        if not isinstance(ids,list) or not ids or len(ids)>200:raise ValueError('Escolha os cortes onde aplicar.')
+        applied,skipped=[],[]
+        for key in dict.fromkeys(str(i) for i in ids):
+            if key==origin['id']:continue
+            try:item=s.candidate(key)
+            except ValueError:skipped.append(dict(id=key,reason='corte não encontrado'));continue
+            if item['status'] in ('exporting','done'):skipped.append(dict(id=key,reason='já exportado (arquivo preservado)'));continue
+            try:dims=self._source_dims(item)
+            except (OSError,ValueError,RuntimeError):skipped.append(dict(id=key,reason='vídeo de origem indisponível'));continue
+            if comp['regions'] and abs((dims[0]/dims[1])/(base[0]/base[1])-1)>composition.ASPECT_TOLERANCE:
+                skipped.append(dict(id=key,reason='proporção do vídeo diferente (as regiões não valem)'));continue
+            project=dict((item['data'].get('project') or project_module.empty()),composition=comp)
+            try:s.save_project(key,item['version'],project,True,self.music_exists,self.image_exists,learn=False)
+            except ValueError as exc:skipped.append(dict(id=key,reason=str(exc)));continue
+            applied.append(key)
+        return dict(applied=applied,skipped=skipped)
 
     def source_frame(self,key,at):
         """Quadro do vídeo ORIGINAL (sem o recorte 9:16) no instante `at` (s do corte), para marcar as regiões."""
