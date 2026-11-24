@@ -13,7 +13,7 @@ INCLUDE_FILES = ('requirements.txt', 'README.md', 'THIRD_PARTY_NOTICES.md', 'clo
 REQUIRED = ('INSTALAR.bat', 'ABRIR_LIVECLIPS.bat', 'ATUALIZAR.bat', 'CRIAR_ATALHO.bat', 'CRIAR_ATALHO.ps1', 'GERAR_DIAGNOSTICO.bat', 'RESTAURAR_BACKUP.bat',
             'requirements.txt', 'liveclips/__main__.py', 'liveclips/static/index.html')
 FORBIDDEN = re.compile(r'(^|/)(\.git|\.venv|venv|__pycache__|tests|validacao|ui|docs/handoff)(/|$)|\.(mp4|ts|mkv|mov|wav|mp3|sqlite3?|db|pem|key|p12|env)$|(^|/)\.env', re.I)
-SECRET = re.compile(rb'(ghp_[A-Za-z0-9]{20,}|github_pat_|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|sk-[A-Za-z0-9]{20,})')
+SECRET = re.compile(rb'(ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|sk-[A-Za-z0-9]{20,})')   # com tamanho mínimo: o texto "github_pat_" em documentação não é segredo
 
 
 def tracked():

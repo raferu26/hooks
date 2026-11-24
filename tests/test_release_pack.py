@@ -39,6 +39,12 @@ class Pack(unittest.TestCase):
             names = z.namelist()
         self.assertFalse([n for n in names if '/tests/' in n or '/validacao/' in n or '/ui/' in n or n.endswith(('.mp4', '.wav', '.bundle'))])
 
+    def test_secret_scanner_flags_real_looking_tokens_but_not_documentation_mentions(self):
+        self.assertTrue(EP.SECRET.search(b'token=ghp_' + b'a' * 30))
+        self.assertTrue(EP.SECRET.search(b'github_pat_' + b'A1_' * 12))
+        self.assertTrue(EP.SECRET.search(b'-----BEGIN RSA PRIVATE KEY-----'))
+        self.assertFalse(EP.SECRET.search('padrões (ghp_, github_pat_, AKIA, sk-) procurados na auditoria'.encode()))
+
     def test_sha256_file_matches(self):
         import hashlib
         line = (self.out / (self.zip.name + '.sha256')).read_text().split()[0]
