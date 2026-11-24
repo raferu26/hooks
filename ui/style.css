@@ -402,7 +402,9 @@ dialog.cmd{width:min(560px,94vw);margin-top:12vh;overflow:hidden}
 .btnlike{display:inline-flex;align-items:center;min-height:var(--tap);padding:5px 10px;border:1px solid var(--line2);border-radius:7px;background:var(--panel2);cursor:pointer}
 #txtIn{width:100%;resize:vertical}
 #txtRes .item{display:flex;gap:10px;align-items:center;padding:4px 0}
-#txtRes input[type=number]{width:74px;flex:none}
+#txtRes input[type=number]{width:78px;flex:none}
+#txtRes input[type=text]{min-width:0}
+#txtRes{max-height:34vh;overflow:auto}
 #txtWarn .banner{margin:4px 0}
 .tapbar{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;z-index:30;background:var(--panel);border:1px solid var(--accent);border-radius:12px;padding:10px 14px;display:grid;gap:6px;min-width:300px;max-width:560px;box-shadow:0 10px 40px #000c}
 .tapbar .ph{font-size:var(--fs-lg);font-weight:650}
