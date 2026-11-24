@@ -16,7 +16,7 @@ from . import atomic
 from . import studio_api
 from . import licensing
 from . import syncaudio
-from . import deps,__version__,agents,analytics,assets,brand,denoise,grade,learning,markers,media,music,ollama,safety,sfx,subtitles,support,variants
+from . import buildinfo,deps,__version__,agents,analytics,assets,brand,denoise,grade,learning,markers,media,music,ollama,safety,sfx,subtitles,support,variants
 from . import engine as engine_module
 from .captions import STYLE_NAMES,caption_terms,lines_from_transcript
 from . import project as project_module
@@ -188,7 +188,7 @@ class App:
         return dict(reject_reasons=REJECT_REASONS,version=__version__,root=str(self.store.root),streamers=streamers,sessions=sessions,
                     candidates=candidates,legacy=self.legacy_sessions(),paused=self.store.setting('paused'),
                     worker=self.engine.state(),engine_mode=self.engine.mode(),camera_suggestions={x['id']:self.store.setting('camera_sugestao:'+x['id']) for x in streamers if self.store.setting('camera_sugestao:'+x['id'])},export_workers=self.engine.export_workers(),captures=self.capture.state(),capture_limit=self.capture.limit(),license=self.license.public(),activity=self.activity(),free_gb=round(media.free_bytes(self.store.root)/1024**3,2),
-                    tools={name:bool(path) for name,path in tools.items()},tool_paths=tools,dependencies=deps.missing(),
+                    tools={name:bool(path) for name,path in tools.items()},tool_paths=tools,dependencies=deps.missing(),build=buildinfo.read(),
                     brand_fonts=brand.fonts(self.store.root),luts=grade.luts(self.store.root),
                     regeneration=self.store.setting('regeneration') or {},backups=backups,
                     learning={r['id']:self.store.learning_summary(r['id']) for r in streamers},

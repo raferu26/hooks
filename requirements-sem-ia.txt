@@ -1,0 +1,9 @@
+# VARIANTE EXPERIMENTAL SEM IA (não é a distribuição comercial; precisa de testes — ver docs/SEM_IA_MIGRACAO.md e docs/WINDOWS_BETA.md)
+# Sem faster-whisper, mediapipe, onnxruntime, jax/jaxlib, matplotlib, scipy, ctranslate2, av, tokenizers, huggingface-hub.
+numpy==1.26.4                      # mesma versão que a referência usa no Windows (imposta pelo mediapipe); validar a combinação, não presumir
+opencv-python-headless==4.10.0.84  # sem GUI e sem módulos contrib; o código só usa cv2 base (resize, Canny, fluxo óptico LK, VideoCapture…)
+pillow>=10.4                       # usado por brand/cover/graphics2d/imagerecipe/keying (antes vinha por tabela via matplotlib/mediapipe)
+streamlink==8.6.3
+yt-dlp[default]>=2026.10.26
+cryptography>=42
+opentimelineio>=0.17               # exportação do arquivo .otio (opcional; o app avisa se faltar)

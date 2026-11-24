@@ -37,10 +37,11 @@ function render(){
  document.querySelectorAll('[data-nav]').forEach(b=>b.setAttribute('aria-current',b.dataset.nav===view?'page':'false'));
  const key=JSON.stringify(state.streamers.map(s=>[s.id,s.name])+streamerId);if(key!==keys.streamers){keys.streamers=key;$('streamerSelect').innerHTML=state.streamers.map(s=>`<option value="${s.id}" ${s.id===streamerId?'selected':''}>${esc(s.name)}</option>`).join('')}
  const ss=sessionsOf();if(!ss.some(s=>s.id===sessionId))sessionId=ss[0]?.id||'';
- renderStatus();renderAlerts();renderCaptures();renderPerf();if(view==='account')renderAccount();
+ renderStatus();renderBuild();renderAlerts();renderCaptures();renderPerf();if(view==='account')renderAccount();
  if(view==='clips')renderClips();
  const pending=sessionsOf().length?state.candidates.filter(c=>c.streamer===streamerId&&c.status==='pending').length:0;$('navCount').textContent=pending;$('navCount').classList.toggle('hide',!pending);
 }
+function renderBuild(){const el=$('buildLabel');if(el&&state.build&&el.textContent!==state.build.label){el.textContent=state.build.label;el.title='Versão · commit · variante do pacote (use ao relatar um problema)'}}
 function renderStatus(){const w=state.worker;$('workerTitle').textContent=w.stage;$('workerDetail').textContent=w.detail+(w.busy&&w.elapsed_s>120?` · há ${Math.round(w.elapsed_s/60)} min nesta etapa${w.elapsed_s>600?'. Está demorando: se não houver % andando, pause esta sessão em Gerenciar ou rode o GERAR_DIAGNOSTICO.bat':''}`:'');$('workerDot').className='dot '+(w.busy?'busy':state.paused?'':'on');$('disk').textContent=state.free_gb.toFixed(1)+' GB livres';$('pauseBtn').textContent=state.paused?'Iniciar análise':'Pausar análise';
  const busyLanes=(w.lanes||[]).filter(l=>l.busy);
  $('workerLanes').innerHTML=!(w.lanes||[]).length?'':!busyLanes.length?'<div class="lane muted"><span class="dot"></span><span>Nada em andamento</span></div>':busyLanes.map(l=>`<div class="lane"><span class="dot ${l.busy?'busy':''}"></span><span><b>${esc(l.label)}</b> ${l.busy?esc((l.stage||'')+(l.percent!=null?' '+l.percent+'%':'')):'<span class="muted">livre</span>'}</span></div>`).join('');

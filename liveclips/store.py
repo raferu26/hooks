@@ -22,8 +22,10 @@ DEFAULT_PROFILE = dict(camera_rect=None, track_roi=None, auto_replay='off', moti
                        video_encoder='cpu',whisper_device='auto',hashtags='',ollama=False,ollama_model='',ollama_url='',
                        learned_terms='',second_pass='small',brand=None,quality_mode='equilibrado',corrections='',blur_regions=[],delivery_folder='',
                        ai_mode='padrao',silence_policy='pausas_longas',free_heuristic=True,cover=True,cover_template='destaque',voice_preset='off',auto_color='off',lut='',lut_strength=1.0,cut_fade='off',slow_interp='off',stabilize='off',title_template='')
-from . import atomic
+from . import atomic,buildinfo
 from .captions import STYLE_NAMES
+if buildinfo.is_sem_ia():   # pacote experimental sem IA: perfis NOVOS já nascem sem modelos (perfis existentes não são tocados)
+    DEFAULT_PROFILE.update(ai_mode='sem_ia',second_pass='off',ollama=False)
 ACTIVE = ('pending', 'approved', 'exporting', 'done', 'error')
 # Motivos de rejeição de um clique. O código fica gravado no corte; o texto é o que a pessoa vê.
 REJECT_REASONS = {

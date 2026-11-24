@@ -84,6 +84,67 @@ def _tail(path, limit=200_000):
         return ''
 
 
+def _run(cmd, timeout=15):
+    import subprocess
+    flags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+    try:
+        cp = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, creationflags=flags, errors='replace')
+        return cp.stdout if cp.returncode == 0 else ''
+    except (OSError, subprocess.SubprocessError):
+        return ''
+
+
+def environment_report(ffmpeg=None):
+    """Linhas de diagnóstico do computador para os testes: CPU, memória, placa(s) de vídeo, codificadores do FFmpeg e versões das bibliotecas.
+    Só leitura e só hardware/software: sem nome de usuário, sem arquivos, sem rede. Cada fonte que falhar vira 'indisponível'."""
+    import importlib.metadata as md
+    lines = ['Computador:']
+    cpu = mem = ''
+    gpus = []
+    if os.name == 'nt':
+        out = _run(['powershell', '-NoProfile', '-NonInteractive', '-Command',
+                    "(Get-CimInstance Win32_Processor | Select-Object -First 1).Name; '---'; "
+                    "Get-CimInstance Win32_VideoController | ForEach-Object { $_.Name + ' | driver ' + $_.DriverVersion }; '---'; "
+                    "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory"], 25).split('---')
+        if len(out) == 3:
+            cpu = out[0].strip(); gpus = [g.strip() for g in out[1].splitlines() if g.strip()]
+            try:
+                mem = '%.1f GB' % (int(out[2].strip()) / 1024 ** 3)
+            except ValueError:
+                mem = ''
+    else:
+        try:
+            cpu = next((l.split(':', 1)[1].strip() for l in Path('/proc/cpuinfo').read_text().splitlines() if l.startswith('model name')), '')
+            mem = '%.1f GB' % (int(next(l.split()[1] for l in Path('/proc/meminfo').read_text().splitlines() if l.startswith('MemTotal'))) / 1024 ** 2)
+        except (OSError, StopIteration, ValueError):
+            pass
+        smi = _run(['nvidia-smi', '--query-gpu=name,driver_version,memory.total', '--format=csv,noheader'], 10)
+        gpus = [g.strip() for g in smi.splitlines() if g.strip()]
+    lines += [f'  CPU: {cpu or "indisponível"} · {os.cpu_count()} processadores lógicos', f'  Memória: {mem or "indisponível"}',
+              '  Placa(s) de vídeo: ' + ('; '.join(gpus) if gpus else 'indisponível')]
+    if ffmpeg:
+        enc = _run([ffmpeg, '-hide_banner', '-encoders'], 20)
+        found = sorted({w for w in ('h264_nvenc', 'hevc_nvenc', 'h264_qsv', 'h264_amf', 'libx264') if w in enc})
+        ver = (_run([ffmpeg, '-version'], 10).splitlines() or [''])[0]
+        filt = _run([ffmpeg, '-hide_banner', '-filters'], 20)
+        lines += [f'  FFmpeg: {ver}', '  Codificadores de vídeo: ' + (', '.join(found) or 'nenhum reconhecido'),
+                  '  Filtros de áudio usados pelo Hook’s: ' + ', '.join(f'{n}={"sim" if (" " + n + " ") in filt else "NÃO"}' for n in ('afftdn', 'afwtdn', 'anlmdn', 'sidechaincompress', 'loudnorm', 'alimiter', 'ass'))]
+    libs = []
+    for name in ('numpy', 'opencv-python-headless', 'opencv-contrib-python', 'pillow', 'streamlink', 'yt-dlp', 'cryptography', 'opentimelineio', 'faster-whisper', 'mediapipe'):
+        try:
+            libs.append(f'{name} {md.version(name)}')
+        except md.PackageNotFoundError:
+            libs.append(f'{name} (não instalado)')
+    lines += ['', 'Bibliotecas:'] + ['  ' + l for l in libs]
+    try:
+        from . import buildinfo
+        b = buildinfo.read()
+        lines += ['', f'Build: {b["label"]}', f'Contém: {", ".join(b.get("includes") or []) or "desenvolvimento"}']
+    except Exception:
+        pass
+    return lines
+
+
 def bundle(root, store, version, tools=None, extra=None):
     """ZIP com log, eventos recentes e dados do sistema. Sem vídeos, banco, perfis ou chat. → caminho do ZIP."""
     root = Path(root)
@@ -111,6 +172,10 @@ def bundle(root, store, version, tools=None, extra=None):
     info = [f'Hook’s {version}', f'Gerado em {dt.datetime.now().astimezone().isoformat(timespec="seconds")}',
             f'Python {platform.python_version()} · {platform.platform()}', f'Espaço livre: {free} GB', '']
     info += [f'{k}: {v}' for k, v in counts.items()]
+    try:
+        info += [''] + environment_report((tools or {}).get('ffmpeg'))
+    except Exception:
+        info += ['', 'Relatório do computador indisponível.']
     if extra:
         info += [''] + [str(line) for line in extra]
     if tools:
