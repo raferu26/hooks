@@ -49,3 +49,13 @@ Antivírus pode bloquear `.bat`/venv; caminho com espaços/acentos; `winget` aus
 | **Downloads de modelos** | o instalador não baixa nada; a rede só é usada em módulos listados (ação do usuário/configuração); o **modo sem IA não abre conexão externa** durante análise, sugestão e render | `tests/test_sem_downloads.py`; `tests/test_noai_mode.py::test_no_outbound_network_in_no_ai_mode` |
 | Pacote | ZIP com manifesto, 7 verificações | `tools/empacotar_release.py` |
 **Limites desta verificação:** os testes rodaram com **numpy 2.5.5** (Linux, Python 3.13); no Windows a instalação usa numpy 1.26.4 e Python 3.11 — combinação **não testada**. Existir wheel não prova que a biblioteca funciona no PC do cliente (drivers, antivírus, VC++ runtime). Uso de CPU/GPU, tempo de exportação e inicialização só se medem no Windows (roteiro W01–W10).
+
+## 7. Pacote de TESTE (0.20.0-beta.1, variante experimental sem IA)
+Gerado de um **commit identificado** (`BUILD_INFO.json` dentro do ZIP e no rodapé da barra lateral do app):
+```bash
+pip download -d wheels --platform win_amd64 --python-version 3.11 --implementation cp --abi cp311 --only-binary=:all: -r requirements-sem-ia.txt
+python3 tools/empacotar_release.py --teste-sem-ia --wheels wheels --resultados TESTES_REALIZADOS.md --inclui "PR #2" "PR #3 (rascunho)" "PR #4 (rascunho)" --saida ../release
+```
+O ZIP traz: código, **`wheels/` offline** (33 arquivos, 85 MB), `INSTALAR_TESTE.bat` (instala sem baixar pacotes Python; o winget só instala Python 3.11/FFmpeg se faltarem), `AUTOTESTE.bat`, `MEDIR_DESEMPENHO.bat`, `COLETAR_RELATORIO.bat`, `VERIFICAR_PACOTE.bat`, `LEIA-ME_TESTE_WINDOWS.txt`, `CHECKLIST_W01_W10.md`, `REGISTRO_DE_PROBLEMAS.md`, `LIMITACOES.md`, `TESTES_REALIZADOS.md` e `MANIFESTO.sha256`.
+Verificações do empacotador (todas automáticas): ZIP íntegro; manifesto confere e cobre todos os arquivos; arquivos exigidos; `.bat` com CRLF; **nenhum wheel de IA**; todos os wheels servem para Windows 64 bits/Python 3.11; sem segredos/vídeos/banco; commit de 40 caracteres no `BUILD_INFO`.
+**Relatórios sem dados privados:** `COLETAR_RELATORIO.bat` junta diagnóstico (log, eventos, CPU/RAM/GPU, codificadores, versões de bibliotecas), autoteste, medição, log de instalação e o checklist, com usuário do Windows e tokens ocultados; nada é enviado pela rede e o ZIP fica em `RELATORIOS` para você conferir e enviar.

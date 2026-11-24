@@ -57,5 +57,6 @@ Cada melhoria grande: ANTES → PROBLEMA → ALTERAÇÃO → TESTE → RESULTADO
 - **Nada importante fica só no ambiente temporário:** envie checkpoints testados com frequência para a branch da funcionalidade (`git push -u origin feature/<nome>`).
 - Uma funcionalidade = uma branch (`feature/...`); commits pequenos com teste proporcional. `main` só recebe por Pull Request depois de testes relacionados e revisão do diff; não dar push direto de trabalho incompleto na `main`.
 - Antes de fechar uma versão beta: suíte completa registrada em `docs/BASELINE.md`/`CHANGELOG.md` (falhas incluídas) e novo bundle de backup: `git bundle create hooks-backup-AAAA-MM-DD.bundle --all` (+ `git bundle verify`).
+- Build de teste Windows: sai de um **commit identificado** (`tools/empacotar_release.py --teste-sem-ia`); a variante sem IA é isolada (`requirements-sem-ia.txt` + arquivo `VARIANTE_SEM_IA`) e nunca altera a referência. Pacote de teste ≠ validado no Windows.
 - Tags: a sessão em nuvem não consegue enviar tags (proxy 403); criar `baseline-0.19.0-beta.1` (commit `dc8e371`) fora da sessão.
 - Antes de `git commit` encadeado a scripts, confira que o passo anterior terminou bem (um commit já subiu com resultados vazios por isso).
