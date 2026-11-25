@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 INCLUDE_DIRS = ('liveclips/', 'hooks_cloud/', 'assets/')
 INCLUDE_FILES = ('requirements.txt', 'README.md', 'THIRD_PARTY_NOTICES.md', 'cloud_config.exemplo.json', 'DEPLOY_SERVIDOR.md', 'DPA_RASCUNHO.md',
-                 'docs/WINDOWS_BETA.md', 'docs/CHANGELOG.md', 'docs/COMPOSICAO_REACAO.md')
+                 'docs/WINDOWS_BETA.md', 'docs/CHANGELOG.md', 'docs/COMPOSICAO_REACAO.md', 'docs/AUDITORIA_WINDOWS.md')
 REQUIRED = ('INSTALAR.bat', 'ABRIR_LIVECLIPS.bat', 'ATUALIZAR.bat', 'CRIAR_ATALHO.bat', 'CRIAR_ATALHO.ps1', 'GERAR_DIAGNOSTICO.bat', 'RESTAURAR_BACKUP.bat',
             'requirements.txt', 'liveclips/__main__.py', 'liveclips/static/index.html')
 FORBIDDEN = re.compile(r'(^|/)(\.git|\.venv|venv|__pycache__|tests|validacao|ui|docs/handoff)(/|$)|\.(mp4|ts|mkv|mov|wav|mp3|sqlite3?|db|pem|key|p12|env)$|(^|/)\.env', re.I)
