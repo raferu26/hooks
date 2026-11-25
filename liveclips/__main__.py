@@ -1,12 +1,11 @@
 import argparse
 from contextlib import contextmanager
-import json
 import os
 from pathlib import Path
 import threading
 import webbrowser
 
-from . import atomic
+from . import atomic,buildinfo
 from . import __version__
 from .app import App,server
 from .recovery import restore_backup
@@ -69,7 +68,7 @@ def main():
             url=f'http://127.0.0.1:{http.server_port}'
             app.quit_callback=lambda:threading.Thread(target=http.shutdown,daemon=True,name='encerrar').start()
             discovery=root/'servidor.json'
-            atomic.write_json(discovery,dict(pid=os.getpid(),port=http.server_port,token=app.token,versao=__version__),private=True)
+            atomic.write_json(discovery,dict(pid=os.getpid(),port=http.server_port,token=app.token,**buildinfo.identity()),private=True)
             print('LIVECLIPS',__version__,flush=True)
             print('Abra o painel:',url,flush=True)
             print('Dados em:',app.store.root,flush=True)

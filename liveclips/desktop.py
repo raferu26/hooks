@@ -58,6 +58,56 @@ def _open(info, path='/', data=None, timeout=3):
         return resp.read()
 
 
+def same_build(info, mine=None):
+    """O servidor descrito em servidor.json é desta instalação (mesma versão, mesmo commit, mesma pasta)? Arquivo antigo, sem esses
+    campos, conta como "outra instalação": nunca se presume que é a mesma."""
+    from . import buildinfo
+    mine = mine or buildinfo.identity()
+    if not info or not all(info.get(k) for k in ('versao', 'commit', 'install')):
+        return False
+    norm = lambda p: os.path.normcase(os.path.normpath(str(p)))
+    return (info['versao'], info['commit'], norm(info['install'])) == (mine['versao'], mine['commit'], norm(mine['install']))
+
+
+def describe(info):
+    return f"versão {info.get('versao') or 'anterior (sem identificação)'}" + (f" ({str(info['commit'])[:10]})" if info.get('commit') else '') + \
+        (f" da pasta {info['install']}" if info.get('install') else '')
+
+
+def confirm(text, title='Hook’s'):
+    """Pergunta Sim/Não. No Windows usa uma caixa de mensagem; fora dele, False (não decide por você)."""
+    if os.name == 'nt':
+        try:
+            import ctypes
+            return ctypes.windll.user32.MessageBoxW(None, text, title, 0x24 | 0x1000) == 6
+        except Exception:
+            return False
+    print(title + ': ' + text, file=sys.stderr, flush=True)
+    return False
+
+
+def replace_other_install(info, show, ask, sleep=time.sleep, now=time.time, timeout=25):
+    """Outra instalação do Hook’s responde sobre a mesma pasta de dados. Devolve True se ela foi encerrada (com o seu OK, e só se estiver
+    ociosa) e dá para subir esta; False se nada foi feito (a janela NÃO deve abrir na versão errada)."""
+    act = activity(info)
+    if not is_idle(act):
+        show('Outra versão do Hook’s (' + describe(info) + ') está aberta e ' + ('ocupada (gravando, analisando ou exportando)' if act else 'não respondeu sobre o que faz') +
+             '.\n\nNão vou encerrá-la sozinha. Abra a janela dela, espere terminar e use o botão Encerrar; depois clique neste atalho de novo.\n\nNenhum dado foi alterado.')
+        return False
+    if not ask('Outra versão do Hook’s está aberta sobre os mesmos dados:\n' + describe(info) + '\n\nPara abrir ESTA versão preciso encerrar a anterior. '
+               'Nenhum projeto ou dado é apagado.\n\nEncerrar a anterior e abrir esta?'):
+        show('Certo, não alterei nada. A janela só abre quando não houver outra versão rodando.')
+        return False
+    request_quit(info)
+    limit = now() + timeout
+    while now() < limit and alive(info):
+        sleep(.5)
+    if alive(info):
+        show('A versão anterior não encerrou. Feche-a pelo botão Encerrar dentro dela e tente de novo.')
+        return False
+    return True
+
+
 def alive(info):
     """O servidor descrito em servidor.json responde de verdade (o arquivo pode ter sobrado de uma queda)."""
     try:
@@ -209,13 +259,18 @@ def watch(window, info, sleep=time.sleep, alive_fn=alive, misses=3, every=3.0, n
 
 
 def launch(root, popen=subprocess.Popen, show=message, sleep=time.sleep, browser_finder=find_browser, open_default=webbrowser.open,
-           ready_timeout=180, min_window_s=8.0, now=time.time):
+           ready_timeout=180, min_window_s=8.0, now=time.time, ask=None):
+    ask = ask or confirm
     root = Path(root)
     lock = Lock(root / WATCH_LOCK)
     watcher = lock.acquire()
     try:
         info = read_discovery(root)
         proc = None
+        if info and alive(info) and not same_build(info):
+            if not replace_other_install(info, show, ask, sleep=sleep, now=now):
+                return 1
+            info = None
         if not (info and alive(info)):
             if watcher:
                 proc = start_server(root, popen)

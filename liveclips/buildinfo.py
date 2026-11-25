@@ -22,3 +22,10 @@ def read(root=ROOT):
 
 def is_sem_ia(root=ROOT):
     return (Path(root) / 'VARIANTE_SEM_IA').exists()
+
+
+def identity(root=ROOT):
+    """Quem sou eu: versão, commit e PASTA de instalação. Gravado em `servidor.json` para que um atalho não abra, sem saber, o servidor de
+    OUTRA instalação que continua rodando sobre a mesma pasta de dados (causa-raiz do relato "os layouts não aparecem")."""
+    info = read(root)
+    return dict(versao=info['version'], commit=info['commit'], install=str(Path(root).resolve()))
