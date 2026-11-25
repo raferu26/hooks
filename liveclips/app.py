@@ -189,7 +189,7 @@ class App:
         return dict(reject_reasons=REJECT_REASONS,version=__version__,root=str(self.store.root),streamers=streamers,sessions=sessions,
                     candidates=candidates,legacy=self.legacy_sessions(),paused=self.store.setting('paused'),
                     worker=self.engine.state(),engine_mode=self.engine.mode(),camera_suggestions={x['id']:self.store.setting('camera_sugestao:'+x['id']) for x in streamers if self.store.setting('camera_sugestao:'+x['id'])},export_workers=self.engine.export_workers(),captures=self.capture.state(),capture_limit=self.capture.limit(),license=self.license.public(),activity=self.activity(),free_gb=round(media.free_bytes(self.store.root)/1024**3,2),
-                    tools={name:bool(path) for name,path in tools.items()},tool_paths=tools,dependencies=deps.missing(),build=buildinfo.read(),
+                    tools={name:bool(path) for name,path in tools.items()},tool_paths=tools,dependencies=deps.missing(),build=dict(buildinfo.read(),ui=buildinfo.ui_build(),install=support.clean_text(str(buildinfo.ROOT))),
                     brand_fonts=brand.fonts(self.store.root),luts=grade.luts(self.store.root),
                     regeneration=self.store.setting('regeneration') or {},backups=backups,
                     learning={r['id']:self.store.learning_summary(r['id']) for r in streamers},
@@ -399,6 +399,7 @@ class App:
                 return dict(started=True)
             if path=='/api/project/get':return self.project_get(payload['id'])
             if path=='/api/project/save':return self.project_save(payload)
+            if path=='/api/diagnostico':return self.diagnostico()
             if path=='/api/composition/resolve':return self.composition_resolve(payload)
             if path=='/api/composition/presets':return self.composition_presets(payload)
             if path=='/api/composition/apply':return self.composition_apply(payload)
@@ -683,6 +684,23 @@ class App:
         if key not in cache:
             info=media.probe(path);cache[key]=(info['display_width'],info['display_height'])
         return cache[key]
+
+    def diagnostico(self):
+        """Diagnóstico da instalação em uso (sem tokens, sem nomes de usuário, sem vídeos nem projetos)."""
+        import sys
+        from . import funcionalidades
+        info=buildinfo.read();status=media.tool_status()
+        try:
+            raw=media.run([media.tool('ffmpeg'),'-version'],20);ffmpeg=(raw.decode('utf-8','replace') if isinstance(raw,bytes) else raw).splitlines()[0]
+        except Exception as exc:ffmpeg='indisponível: '+str(exc)[:80]
+        rows=funcionalidades.run_all(root=self.store.root,render=False)
+        return dict(
+            versao_backend=info['version'],commit=info['commit'],variante=info['variant'],build_em=info.get('built',''),
+            interface=buildinfo.ui_build(),instalacao=support.clean_text(str(buildinfo.ROOT)),dados=support.clean_text(str(self.store.root)),
+            python=sys.version.split()[0],ffmpeg=ffmpeg,ferramentas={k:bool(v) for k,v in status.items()},dependencias_ausentes=deps.missing(),
+            recursos_declarados=funcionalidades.declared(info),
+            verificacoes=[dict(passo=n,ok=bool(ok),detalhe=support.clean_text(str(d))[:300]) for n,ok,d in rows],
+            catalogo_layouts=[l['id'] for l in composition_module.catalog()['layouts']])
 
     def composition_resolve(self,payload):
         """Camadas da composição de reação (as MESMAS que o render usa) para a interface desenhar a prévia imediata."""

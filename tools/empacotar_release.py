@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 INCLUDE_DIRS = ('liveclips/', 'hooks_cloud/', 'assets/')
 INCLUDE_FILES = ('requirements.txt', 'README.md', 'THIRD_PARTY_NOTICES.md', 'cloud_config.exemplo.json', 'DEPLOY_SERVIDOR.md', 'DPA_RASCUNHO.md',
-                 'docs/WINDOWS_BETA.md', 'docs/CHANGELOG.md', 'docs/COMPOSICAO_REACAO.md')
+                 'docs/WINDOWS_BETA.md', 'docs/CHANGELOG.md', 'docs/COMPOSICAO_REACAO.md', 'docs/AUDITORIA_WINDOWS.md')
 REQUIRED = ('INSTALAR.bat', 'ABRIR_LIVECLIPS.bat', 'ATUALIZAR.bat', 'CRIAR_ATALHO.bat', 'CRIAR_ATALHO.ps1', 'GERAR_DIAGNOSTICO.bat', 'RESTAURAR_BACKUP.bat',
             'requirements.txt', 'liveclips/__main__.py', 'liveclips/static/index.html')
 FORBIDDEN = re.compile(r'(^|/)(\.git|\.venv|venv|__pycache__|tests|validacao|ui|docs/handoff)(/|$)|\.(mp4|ts|mkv|mov|wav|mp3|sqlite3?|db|pem|key|p12|env)$|(^|/)\.env', re.I)
@@ -83,7 +83,7 @@ def verify(zpath):
 
 AI_WHEELS = re.compile(r'^(mediapipe|faster[-_]whisper|ctranslate2|onnxruntime|jax|jaxlib|ml[-_]dtypes|matplotlib|scipy|tokenizers|huggingface[-_]hub|hf[-_]xet|sentencepiece|torch|tensorflow|av)-', re.I)
 TEST_DOCS = ('LEIA-ME_TESTE_WINDOWS.txt', 'CHECKLIST_W01_W10.md', 'REGISTRO_DE_PROBLEMAS.md', 'LIMITACOES.md', 'ROTEIRO_LAYOUT_REACAO.md')
-TEST_REQUIRED = ('INSTALAR_TESTE.bat', 'AUTOTESTE.bat', 'MEDIR_DESEMPENHO.bat', 'COLETAR_RELATORIO.bat', 'VERIFICAR_PACOTE.bat', 'requirements-sem-ia.txt',
+TEST_REQUIRED = ('INSTALAR_TESTE.bat', 'DIAGNOSTICO_WINDOWS.bat', 'AUTOTESTE.bat', 'MEDIR_DESEMPENHO.bat', 'COLETAR_RELATORIO.bat', 'VERIFICAR_PACOTE.bat', 'requirements-sem-ia.txt',
                  'LEIA-ME_TESTE_WINDOWS.txt', 'CHECKLIST_W01_W10.md', 'LIMITACOES.md', 'BUILD_INFO.json', 'MANIFESTO.sha256')
 
 
@@ -98,11 +98,41 @@ def head_commit():
     return subprocess.run(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], capture_output=True, text=True, check=True).stdout.strip()
 
 
-def build_test(out_dir, wheels, results_md=None, includes=(), allow_dirty=False):
+def gate_funcional():
+    """BLOQUEIO: não empacota se a versão declara recursos que o produto não tem. Roda sobre a árvore do commit:
+    1) a interface distribuída é exatamente o que o build das fontes de `ui/` produz; 2) os recursos declarados estão no catálogo, no HTML,
+    nas rotas e rodam no FFmpeg. Devolve a lista de problemas (vazia = pode empacotar)."""
+    import os, tempfile
+    sys.path.insert(0, str(ROOT))
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / 'index.html'
+        cp = subprocess.run(['bash', str(ROOT / 'ui' / 'build.sh')], capture_output=True, text=True, env=dict(os.environ, HOOKS_UI_OUT=str(out)))
+        if 'BUILD_OK' not in cp.stdout:
+            problems.append('build da interface falhou: ' + (cp.stdout + cp.stderr)[-300:])
+        elif out.read_bytes() != (ROOT / 'liveclips' / 'static' / 'index.html').read_bytes():
+            problems.append('liveclips/static/index.html NÃO corresponde às fontes de ui/ (interface não reconstruída): rode "bash ui/build.sh" e commite')
+    from liveclips import buildinfo, funcionalidades
+    if not buildinfo.ui_build()['confere']:
+        problems.append('o identificador da interface (meta ui-build) não confere com o conteúdo')
+    for name, ok, detail in funcionalidades.run_all(root=tempfile.mkdtemp(prefix='hooks_gate_')):
+        if not ok:
+            problems.append(f'{name}: {detail}')
+    return problems
+
+
+def current_branch():
+    return subprocess.run(['git', '-C', str(ROOT), 'rev-parse', '--abbrev-ref', 'HEAD'], capture_output=True, text=True).stdout.strip()
+
+
+def build_test(out_dir, wheels, results_md=None, includes=(), allow_dirty=False, suite_commit=None, suite_resumo=''):
     """Pacote de TESTE para Windows (variante experimental sem IA): código + `wheels/` offline + scripts + roteiro, de um commit identificado.
     Devolve (zip, sha256, verificações)."""
     if not allow_dirty and subprocess.run(['git', '-C', str(ROOT), 'status', '--porcelain', '--untracked-files=no'], capture_output=True, text=True).stdout.strip():
         raise SystemExit('A árvore tem alterações não commitadas: commite antes de empacotar.')
+    problems = gate_funcional()
+    if problems:
+        raise SystemExit('EMPACOTAMENTO BLOQUEADO: a versão declara recursos que o produto não tem:\n - ' + '\n - '.join(problems))
     wheels = Path(wheels)
     whl = sorted(wheels.glob('*.whl'))
     if not whl:
@@ -119,7 +149,13 @@ def build_test(out_dir, wheels, results_md=None, includes=(), allow_dirty=False)
     zpath = out_dir / f'Hooks-{ver}-teste-sem-ia-{commit[:10]}.zip'
     prefix = f'Hooks-{ver}-teste/'
     manifest = []
-    build_info = dict(version=ver, commit=commit, variant='sem_ia', built=__import__('datetime').datetime.now().astimezone().isoformat(timespec='seconds'),
+    sys.path.insert(0, str(ROOT))
+    from liveclips import buildinfo, funcionalidades
+    estado = dict(build_produzido=True, testes_automatizados_linux=bool(suite_commit) and suite_commit == commit, windows_automatizado=False,
+                  windows_fisico=False, aprovada_para_distribuicao=False, suite_commit=suite_commit or '', suite_resumo=suite_resumo,
+                  observacao='Estados diferentes: build produzido NÃO é teste aprovado; teste Linux NÃO é Windows; só o teste físico aprova a distribuição.')
+    build_info = dict(branch=current_branch(), funcionalidades_esperadas=list(funcionalidades.EXPECTED), ui=buildinfo.ui_build()['id'], estado=estado,
+                      version=ver, commit=commit, variant='sem_ia', built=__import__('datetime').datetime.now().astimezone().isoformat(timespec='seconds'),
                       includes=list(includes), wheels=len(whl), python='3.11 (64 bits)', numpy='1.26.4')
     with zipfile.ZipFile(zpath, 'w', zipfile.ZIP_DEFLATED) as z:
         def put(name, data):
@@ -133,6 +169,7 @@ def build_test(out_dir, wheels, results_md=None, includes=(), allow_dirty=False)
             put(f, (ROOT / f).read_bytes())
         for name in TEST_DOCS:
             put(name, (ROOT / 'docs' / 'WINDOWS_TESTE' / name).read_bytes())
+        put('ESTADO_DO_RELEASE.json', json.dumps(estado, ensure_ascii=False, indent=1).encode('utf-8'))
         put('VARIANTE_SEM_IA', 'Variante experimental sem IA: perfis novos nascem com ai_mode=sem_ia.\n'.encode('utf-8'))
         put('BUILD_INFO.json', json.dumps(build_info, ensure_ascii=False, indent=1).encode('utf-8'))
         put('TESTES_REALIZADOS.md', (Path(results_md).read_bytes() if results_md else 'Nenhum resultado informado ao empacotar.\n'.encode('utf-8')))
@@ -171,8 +208,9 @@ if __name__ == '__main__':
     ap.add_argument('--teste-sem-ia', action='store_true', help='pacote de TESTE para Windows (variante experimental sem IA) com wheels offline')
     ap.add_argument('--wheels', help='pasta com os .whl win_amd64/cp311 (pip download) para a variante de teste'); ap.add_argument('--resultados', help='arquivo .md com os testes realizados')
     ap.add_argument('--inclui', nargs='*', default=[], help='PRs/branches incluídos neste build (texto)')
+    ap.add_argument('--suite-commit', help='commit em que a suíte completa passou (só vira "testes aprovados" se for igual ao do pacote)'); ap.add_argument('--suite-resumo', default='')
     a = ap.parse_args()
-    z, d, checks = build_test(a.saida, a.wheels, a.resultados, a.inclui) if a.teste_sem_ia else build(a.saida)
+    z, d, checks = build_test(a.saida, a.wheels, a.resultados, a.inclui, suite_commit=a.suite_commit, suite_resumo=a.suite_resumo) if a.teste_sem_ia else build(a.saida)
     print(z, d)
     for name, ok, detail in checks:
         print(('OK    ' if ok else 'FALHA ') + name, detail or '')

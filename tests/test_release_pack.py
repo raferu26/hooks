@@ -98,3 +98,33 @@ class TestPackage(unittest.TestCase):
             self.assertTrue(EP.wheel_fits_windows_py311(ok), ok)
         for bad in ('numpy-2.0-cp312-cp312-win_amd64.whl', 'x-1-cp311-cp311-linux_x86_64.whl'):
             self.assertFalse(EP.wheel_fits_windows_py311(bad), bad)
+
+
+class FunctionalGate(unittest.TestCase):
+    """O empacotamento TERMINA COM ERRO se a versão declara recursos que o produto não tem (ou a interface não foi reconstruída)."""
+
+    def setUp(self):
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'tools'))
+        import empacotar_release
+        self.pack = empacotar_release
+
+    def test_gate_passes_on_the_current_tree(self):
+        self.assertEqual(self.pack.gate_funcional(), [])
+
+    def test_stale_html_blocks(self):
+        html = Path(__file__).resolve().parent.parent / 'liveclips' / 'static' / 'index.html'
+        original = html.read_bytes()
+        try:
+            html.write_bytes(original.replace(b'data-rxl', b'data-old'))
+            problems = self.pack.gate_funcional()
+        finally:
+            html.write_bytes(original)
+        self.assertTrue(any('NÃO corresponde' in p for p in problems), problems)
+        self.assertTrue(any('layouts_8' in p for p in problems), problems)
+
+    def test_build_test_refuses_when_gate_fails(self):
+        with unittest.mock.patch.object(self.pack, 'gate_funcional', lambda: ['layouts_8: faltam']):
+            with self.assertRaises(SystemExit) as ctx:
+                self.pack.build_test(tempfile.mkdtemp(), tempfile.mkdtemp(), allow_dirty=True)
+        self.assertIn('BLOQUEADO', str(ctx.exception))

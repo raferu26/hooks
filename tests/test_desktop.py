@@ -6,7 +6,7 @@ import threading
 import unittest
 from pathlib import Path
 
-from liveclips import desktop
+from liveclips import buildinfo, desktop
 from liveclips.app import App, server
 
 
@@ -40,7 +40,7 @@ class Running:
         def quit_():
             self.quits += 1
         self.app.quit_callback = quit_
-        (self.root / desktop.DISCOVERY).write_text(json.dumps(dict(pid=1, port=self.http.server_port, token=self.app.token)), encoding='utf-8')
+        (self.root / desktop.DISCOVERY).write_text(json.dumps(dict(pid=1, port=self.http.server_port, token=self.app.token, **buildinfo.identity())), encoding='utf-8')
 
     @property
     def info(self):
@@ -240,13 +240,77 @@ class LaunchTests(unittest.TestCase):
             def popen(cmd, **kw):
                 if '--no-browser' in cmd:
                     started.append(cmd)
-                    (root / desktop.DISCOVERY).write_text(json.dumps(dict(port=real.http.server_port, token=real.app.token)), encoding='utf-8')
+                    (root / desktop.DISCOVERY).write_text(json.dumps(dict(port=real.http.server_port, token=real.app.token, **buildinfo.identity())), encoding='utf-8')
                     return FakeProc([None])
                 return FakeProc()
             shown = []
             desktop.launch(root, popen=popen, show=shown.append, sleep=lambda s: None, browser_finder=lambda: 'edge.exe',
                            open_default=lambda u: None, min_window_s=0)
             self.assertEqual(len(started), 1)
+
+
+class OtherInstallTests(unittest.TestCase):
+    """Causa-raiz do relato "os layouts não aparecem": o atalho da versão NOVA abria o servidor da versão ANTERIOR, que continuava
+    rodando sobre a mesma pasta de dados. O lançador agora confere versão, commit e pasta de instalação."""
+
+    def old_server(self, **identity):
+        r = Running(self)
+        (r.root / desktop.DISCOVERY).write_text(json.dumps(dict(pid=1, port=r.http.server_port, token=r.app.token, **identity)), encoding='utf-8')
+        return r
+
+    def launch(self, r, ask, shown, calls):
+        def popen(cmd, **k):
+            calls.append(cmd)
+            if '--no-browser' in cmd:   # "o novo servidor sobe": reaproveita o servidor de teste, agora com a identidade desta instalação
+                (r.root / desktop.DISCOVERY).write_text(json.dumps(dict(pid=2, port=r.http.server_port, token=r.app.token, **buildinfo.identity())), encoding='utf-8')
+                return FakeProc([None])
+            return FakeProc()
+        return desktop.launch(r.root, popen=popen, show=shown.append, sleep=lambda s: None, browser_finder=lambda: 'edge.exe',
+                              open_default=lambda u: None, min_window_s=0, ask=ask)
+
+    def test_same_build_is_reused(self):
+        mine = buildinfo.identity()
+        self.assertTrue(desktop.same_build(mine, mine))
+        for key in ('versao', 'commit', 'install'):
+            self.assertFalse(desktop.same_build(dict(mine, **{key: 'outra'}), mine), key)
+        self.assertFalse(desktop.same_build(dict(versao=mine['versao']), mine))      # servidor.json de versão antiga, sem identidade
+        self.assertFalse(desktop.same_build(None, mine))
+
+    def test_install_path_comparison_ignores_case_and_slashes_on_windows_style_paths(self):
+        a = dict(versao='1', commit='x', install='C:\\Hooks2\\app')
+        self.assertTrue(desktop.same_build(a, dict(a)))
+
+    def test_old_install_idle_and_user_agrees_is_replaced(self):
+        r = self.old_server(versao='0.20.0-beta.1')
+        shown, calls, questions = [], [], []
+        stop = lambda: None
+        r.app.quit_callback = lambda: setattr(r, 'old_stopped', True)
+        orig_alive = desktop.alive
+        desktop.alive = lambda info: False if getattr(r, 'old_stopped', False) and info.get('pid') == 1 else orig_alive(info)
+        self.addCleanup(setattr, desktop, 'alive', orig_alive)
+        rc = self.launch(r, lambda t: questions.append(t) or True, shown, calls)
+        self.assertEqual(rc, 0)
+        self.assertEqual(len(questions), 1)
+        self.assertIn('0.20.0-beta.1', questions[0])
+        self.assertIn('Nenhum projeto', questions[0])
+        self.assertTrue(getattr(r, 'old_stopped', False))
+        self.assertTrue(any('--no-browser' in c for c in calls))       # subiu o servidor DESTA instalação antes de abrir a janela
+
+    def test_user_declines_nothing_changes_and_no_window_opens_on_the_wrong_version(self):
+        r = self.old_server(versao='0.20.0-beta.1')
+        shown, calls = [], []
+        self.assertEqual(self.launch(r, lambda t: False, shown, calls), 1)
+        self.assertEqual(calls, [])
+        self.assertEqual(r.quits, 0)
+
+    def test_busy_old_install_is_never_stopped(self):
+        r = self.old_server(versao='0.20.0-beta.1')
+        r.app.activity = lambda: dict(capturas=1, analisando=False, exportando=0)
+        shown, calls, questions = [], [], []
+        self.assertEqual(self.launch(r, lambda t: questions.append(t) or True, shown, calls), 1)
+        self.assertEqual(questions, [])
+        self.assertEqual((calls, r.quits), ([], 0))
+        self.assertIn('ocupada', shown[0])
 
 
 class FilesTests(unittest.TestCase):

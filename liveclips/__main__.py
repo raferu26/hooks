@@ -1,12 +1,11 @@
 import argparse
 from contextlib import contextmanager
-import json
 import os
 from pathlib import Path
 import threading
 import webbrowser
 
-from . import atomic
+from . import atomic,buildinfo
 from . import __version__
 from .app import App,server
 from .recovery import restore_backup
@@ -40,6 +39,9 @@ def main():
         from . import selftest
         if sys.argv[1]=='relatorio':selftest.relatorio();raise SystemExit(0)
         raise SystemExit(selftest.selfcheck() if sys.argv[1]=='selfcheck' else selftest.medir(seconds=int(os.environ.get('HOOKS_MEDIR_SEGUNDOS','20'))))
+    if len(sys.argv)>1 and sys.argv[1]=='diagnostico':
+        from . import diagnostico
+        raise SystemExit(diagnostico.main(sys.argv[2:]))
     if len(sys.argv)>1 and sys.argv[1]=='diag':
         from . import media,support
         from .store import Store
@@ -69,7 +71,7 @@ def main():
             url=f'http://127.0.0.1:{http.server_port}'
             app.quit_callback=lambda:threading.Thread(target=http.shutdown,daemon=True,name='encerrar').start()
             discovery=root/'servidor.json'
-            atomic.write_json(discovery,dict(pid=os.getpid(),port=http.server_port,token=app.token,versao=__version__),private=True)
+            atomic.write_json(discovery,dict(pid=os.getpid(),port=http.server_port,token=app.token,**buildinfo.identity()),private=True)
             print('LIVECLIPS',__version__,flush=True)
             print('Abra o painel:',url,flush=True)
             print('Dados em:',app.store.root,flush=True)

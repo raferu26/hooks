@@ -1,6 +1,11 @@
 # CHANGELOG (a partir da migração para o Claude Code)
 Histórico anterior à migração é **herdado e não reverificado**: ver `docs/handoff/HOOKS_HISTORY_AND_DECISIONS.md`. Aqui só entra o que foi feito e verificado neste repositório.
 
+## [Operação Windows First — causa-raiz e integridade de release] — 25/11/2026 (branch `fix/windows-layouts-integration`)
+- **ANTES:** beta.2 entregue; usuário não via o Layout de reação. **PROBLEMA:** o lançador reaproveitava o servidor de outra instalação sobre `C:\LiveClips` (ver `docs/AUDITORIA_WINDOWS.md`); nenhuma verificação ligava pacote ↔ produto em execução.
+- **ALTERAÇÃO/TESTE/RESULTADO:** ver o documento acima. Versão candidata `0.20.0-beta.3-rc1`.
+- **MEDIDO:** RAM do servidor ocioso ≈ 54 MB (Linux). Benchmarks de composição inalterados (seção anterior).
+
 ## [Layout de reação — composição de webcam e conteúdo] — 24/11/2026 (branch `feature/layout-reacoes`)
 - **ANTES:** converter um vídeo de reação horizontal para 9:16 só oferecia "Vídeo inteiro" / "Preencher". A webcam do streamer podia sair do quadro (ouve-se a voz, não se vê a reação) e não havia como combinar duas regiões do mesmo vídeo.
 - **PROBLEMA:** sem composição de regiões; sem escolher a webcam no vídeo original; sem layouts por trecho.

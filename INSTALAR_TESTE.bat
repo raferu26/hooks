@@ -7,7 +7,7 @@ echo HOOK'S - instalacao de TESTE (variante experimental sem IA)
 echo HOOK'S - instalacao de TESTE > "%LOG%"
 echo %date% %time% >> "%LOG%"
 echo.
-echo Este instalador usa os arquivos da pasta "wheels" (sem baixar pacotes Python). So o winget pode baixar Python 3.11 e FFmpeg, se faltarem.
+echo Este instalador usa os arquivos da pasta "wheels" (sem baixar pacotes Python). Se faltarem Python 3.11 ou FFmpeg, ele PERGUNTA antes de usar o winget.
 echo O registro fica em instalacao_teste.log nesta pasta.
 echo.
 if not exist "%~dp0wheels\" (
@@ -22,13 +22,21 @@ if not defined USE_PY_LAUNCHER if exist "%LOCALAPPDATA%\Programs\Python\Python31
 if not defined USE_PY_LAUNCHER if not defined PYEXE if exist "%ProgramFiles%\Python311\python.exe" set "PYEXE=%ProgramFiles%\Python311\python.exe"
 if defined USE_PY_LAUNCHER goto python_ok
 if defined PYEXE goto python_ok
-echo Python 3.11 nao encontrado. Tentando instalar pelo winget...
-echo Python 3.11 nao encontrado; winget >> "%LOG%"
+echo Python 3.11 nao encontrado. >> "%LOG%"
+echo.
+echo O Python 3.11 nao foi encontrado neste computador.
 where winget >nul 2>nul
 if errorlevel 1 (
  echo O winget nao existe neste Windows. Instale o Python 3.11 de 64 bits em python.org, marque "Add to PATH" e rode de novo.
  goto erro
 )
+echo Posso instala-lo pelo winget: Python 3.11, so para o seu usuario.
+echo - Precisa de internet.
+echo - Instala um programa no seu Windows. Nada mais e alterado.
+echo - Se preferir, responda N, instale voce mesmo o Python 3.11 de 64 bits em python.org e rode este arquivo de novo.
+choice /C SN /M "Instalar o Python 3.11 agora com o winget"
+if errorlevel 2 goto recusou
+echo Usuario aceitou instalar o Python pelo winget >> "%LOG%"
 winget install --id Python.Python.3.11 --exact --scope user --accept-package-agreements --accept-source-agreements >> "%LOG%" 2>&1
 if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" set "PYEXE=%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
 if not defined PYEXE (
@@ -54,9 +62,18 @@ if errorlevel 1 (
 )
 ".venv\Scripts\python.exe" -m liveclips.diagnostics >> "%LOG%" 2>&1
 if not errorlevel 1 goto ferramentas_ok
-echo FFmpeg nao encontrado. Tentando instalar pelo winget (Gyan.FFmpeg)...
+echo FFmpeg nao encontrado. >> "%LOG%"
+echo.
+echo O FFmpeg (programa que processa os videos) nao foi encontrado.
 where winget >nul 2>nul
 if errorlevel 1 goto sem_ffmpeg
+echo Posso instala-lo pelo winget: pacote Gyan.FFmpeg.
+echo - Precisa de internet.
+echo - Instala um programa no seu Windows e o coloca no PATH do seu usuario. Nada mais e alterado.
+echo - Se preferir, responda N, instale o FFmpeg voce mesmo e rode este arquivo de novo.
+choice /C SN /M "Instalar o FFmpeg agora com o winget"
+if errorlevel 2 goto recusou
+echo Usuario aceitou instalar o FFmpeg pelo winget >> "%LOG%"
 winget install --id Gyan.FFmpeg --exact --accept-package-agreements --accept-source-agreements >> "%LOG%" 2>&1
 ".venv\Scripts\python.exe" -m liveclips.diagnostics >> "%LOG%" 2>&1
 if errorlevel 1 goto sem_ffmpeg
@@ -69,6 +86,11 @@ echo.
 echo PRONTO. Abra o atalho Hook's na area de trabalho (ou ABRIR_LIVECLIPS.bat) e siga o arquivo LEIA-ME_TESTE_WINDOWS.txt.
 pause
 exit /b 0
+:recusou
+echo.
+echo Certo: nada foi instalado no seu Windows. Instale o que faltou e rode INSTALAR_TESTE.bat de novo.
+pause
+exit /b 2
 :sem_ffmpeg
 echo Nao foi possivel instalar o FFmpeg automaticamente. Instale o pacote Gyan.FFmpeg (winget) ou ffmpeg.org e rode de novo.
 goto erro

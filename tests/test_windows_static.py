@@ -62,3 +62,18 @@ class WindowsStatic(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class WingetNeedsConsent(unittest.TestCase):
+    def test_every_winget_install_is_preceded_by_a_yes_no_prompt_and_refusal_installs_nothing(self):
+        import re
+        from pathlib import Path
+        text = (Path(__file__).resolve().parent.parent / 'INSTALAR_TESTE.bat').read_bytes().decode('utf-8').replace('\r\n', '\n')
+        lines = text.split('\n')
+        installs = [i for i, l in enumerate(lines) if l.strip().lower().startswith('winget install')]
+        self.assertEqual(len(installs), 2)
+        for i in installs:
+            before = '\n'.join(lines[max(0, i - 6):i])
+            self.assertIn('choice /C SN', before)
+            self.assertIn('if errorlevel 2 goto recusou', before)
+        self.assertIn(':recusou', text)

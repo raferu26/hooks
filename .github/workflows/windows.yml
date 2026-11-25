@@ -1,0 +1,33 @@
+# Teste automatizado em Windows REAL (runner windows-latest). SÓ RODA SOB DEMANDA (workflow_dispatch): nada dispara sozinho, então não gera
+# custo inesperado. Em repositório privado, minutos de Windows contam em dobro na cota do plano: confira o plano antes de rodar.
+# Este workflow NÃO substitui o teste físico no PC do usuário (GPU, antivírus, drivers, experiência visual). Nunca foi executado ainda.
+name: windows-teste
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Dependências (sem IA)
+        run: python -m pip install -r requirements-sem-ia.txt
+      - name: Autoteste de instalação (módulos, FFmpeg, libass, servidor, recursos declarados)
+        run: python -m liveclips selfcheck
+      - name: Diagnóstico
+        run: python -m liveclips diagnostico
+      - name: Testes de composição, lançador, diagnóstico, estáticos Windows
+        run: python -W ignore -m unittest tests.test_composicao tests.test_composicao_cenas tests.test_composicao_presets tests.test_funcionalidades tests.test_desktop tests.test_diagnostico tests.test_windows_static tests.test_reacao_sugestoes
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relatorios-windows
+          path: |
+            relatorio_autoteste.json
+            diagnostico_windows.txt

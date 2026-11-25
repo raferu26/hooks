@@ -16,7 +16,7 @@ from pathlib import Path
 from . import __version__, buildinfo, media, support
 
 FLAGS = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
-CRITICAL = ('modulos', 'ffmpeg', 'codificacao_cpu', 'servidor')
+CRITICAL = ('modulos', 'ffmpeg', 'codificacao_cpu', 'servidor', 'funcionalidades')
 
 
 def _ff(args, timeout=120):
@@ -102,6 +102,18 @@ def _server(tmp):
         app.close()
 
 
+def _features(tmp):
+    """Os recursos que ESTA versão declara estão no produto instalado (catálogo, HTML distribuído, rotas, FFmpeg)?"""
+    from . import funcionalidades
+    rows = funcionalidades.run_all(root=tmp / 'dados_func')
+    bad = [f'{n}: {d}' for n, ok, d in rows if not ok]
+    declared = funcionalidades.declared()
+    unknown = [k for k in buildinfo.read().get('funcionalidades_esperadas', []) if k not in funcionalidades.EXPECTED]
+    if unknown:
+        bad.append('BUILD_INFO declara recursos desconhecidos: ' + ', '.join(unknown))
+    return not bad, (f'{len(declared)} recursos declarados presentes: ' + ', '.join(declared)) if not bad else ' | '.join(bad)
+
+
 def selfcheck(out_dir='.'):
     print(f'Hook’s - autoteste de instalação · {buildinfo.read()["label"]}', flush=True)
     results = []
@@ -113,6 +125,7 @@ def selfcheck(out_dir='.'):
     _step('gpu', _gpu_encoders, results)
     _step('legenda_libass', lambda: _captions_render(tmp), results)
     _step('servidor', lambda: _server(tmp), results)
+    _step('funcionalidades', lambda: _features(tmp), results)
     report = dict(versao=__version__, build=buildinfo.read(), python=sys.version.split()[0], sistema=support.clean_text(' '.join(support.environment_report(media.tool('ffmpeg')))), resultados=results)
     report['sistema'] = support.clean_text('\n'.join(support.environment_report(media.tool('ffmpeg'))))
     path = Path(out_dir) / 'relatorio_autoteste.json'
