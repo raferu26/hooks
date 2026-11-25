@@ -24,3 +24,8 @@ SE O QUE VOCE VER NAO ESTIVER AQUI
 
 SAIR / DESINSTALAR
 - Botao "Encerrar Hook's" na barra lateral. Para remover: apague a pasta do programa e a pasta de dados C:\LiveClips (la ficam seus projetos).
+
+---- 0.20.0-beta.3-rc1: se a tela não mostrar o que esperava ----
+1. Olhe o rodapé da barra lateral: versão, commit e "tela xxxxxx". Clique nele para ver o diagnóstico.
+2. Rode DIAGNOSTICO_WINDOWS.bat e leia diagnostico_windows.txt. Se aparecer "É OUTRA INSTALAÇÃO", feche a versão antiga (botão Encerrar dentro dela).
+3. O atalho agora pergunta antes de encerrar uma versão antiga. Responda Sim para abrir esta versão; nenhum dado é apagado.
