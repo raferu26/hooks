@@ -43,6 +43,7 @@ class Server:
             if f.exists():
                 try:
                     self.info = json.loads(f.read_text(encoding='utf-8'))
+                    self.port = int(self.info['port'])        # o app usa outra porta se a pedida estiver ocupada
                     self.get('/')
                     return
                 except (OSError, ValueError):
@@ -53,7 +54,7 @@ class Server:
         raise SystemExit('servidor do pacote não subiu')
 
     def get(self, path):
-        req = urllib.request.Request(f'http://127.0.0.1:{self.port}{path}', headers={'X-LiveClips-Token': self.info['token']})
+        req = urllib.request.Request(f'http://127.0.0.1:{self.port}{path}', headers={'X-LiveClips-Token': self.info['token'], 'Cookie': 'lc_session=' + self.info['token']})
         with urllib.request.urlopen(req, timeout=30) as r:
             return r.read()
 
@@ -81,11 +82,11 @@ class Server:
         (self.root / 'servidor.json').unlink(missing_ok=True)
 
 
-def frames(video, at, vf='scale=108:192,format=gray'):
+def frames(video, at, w=108, h=192):
     import numpy as np
-    out = subprocess.run(['ffmpeg', '-nostdin', '-loglevel', 'error', '-ss', str(at), '-i', str(video), '-frames:v', '1', '-vf', vf, '-f', 'rawvideo', '-'],
+    out = subprocess.run(['ffmpeg', '-nostdin', '-loglevel', 'error', '-ss', str(at), '-i', str(video), '-frames:v', '1', '-vf', f'scale={w}:{h},format=gray', '-f', 'rawvideo', '-'],
                          capture_output=True, check=True).stdout
-    return np.frombuffer(out, np.uint8).reshape(192, 108).astype(int)
+    return np.frombuffer(out, np.uint8).reshape(h, w).astype(int)
 
 
 def wait_for(fn, timeout=240, step=1.0):
@@ -122,6 +123,9 @@ def main():
     env = {k: v for k, v in os.environ.items() if k not in ('PYTHONPATH', 'PYTHONHOME')}
     cp = subprocess.run([a.python, '-I', str(HERE / '_semear_pacote.py'), str(pkg), str(root)], capture_output=True, text=True, env=env)
     check('semear_dados_com_codigo_do_pacote', cp.returncode == 0, cp.stderr[-300:])
+    if 'SEMEADO' not in cp.stdout:
+        print(json.dumps(dict(resultados=results, falhas=fails), ensure_ascii=False, indent=1))
+        return 1
     ids = cp.stdout.split('SEMEADO')[1].split()[1:]
     srv = Server(pkg, root, a.porta, a.python)
     srv.start()
@@ -145,7 +149,7 @@ def main():
         check('t8_projeto_antigo_abre_sem_composicao', not (proj['project'] or {}).get('composition'))
         # T3/T6 pela interface
         if not a.sem_ui:
-            ue = subprocess.run([a.python, str(REPO / 'ui' / 'e2e_reacao.py')], capture_output=True, text=True, env=dict(os.environ, PORT=str(a.porta), OUT=str(work / 'telas')))
+            ue = subprocess.run([sys.executable, str(REPO / 'ui' / 'e2e_reacao.py')], capture_output=True, text=True, env=dict(os.environ, PORT=str(a.porta), OUT=str(work / 'telas')))
             tail = ue.stdout.strip().splitlines()
             check('t3_t6_interface_e2e_no_pacote', ue.returncode == 0, '\n'.join(tail[-6:]) + ue.stderr[-300:])
             shots = work / 'telas'
@@ -158,23 +162,27 @@ def main():
             r = srv.post('/api/project/get', {'id': cid})
             pr = r['preview']
             return r if pr.get('ready') and pr.get('available') and r['version'] >= version_after else None
+        p0 = srv.post('/api/project/get', {'id': cid})
+        srv.post('/api/review', {'id': cid, 'version': p0['version'], 'start': p0['start'], 'end': p0['end'], 'action': 'preview'})
         base = wait_for(lambda: preview_ready(0), 240)
         check('t4_previa_inicial_pronta', bool(base))
         raw0 = srv.get(f'/media/preview?id={cid}&pv=0') if base else b''
         (work / 'prev0.mp4').write_bytes(raw0)
         comp = dict(layout='cam_ampliada', regions=dict(webcam=dict(x=.70, y=.03, w=.27, h=.42), conteudo=dict(x=0, y=0, w=.58, h=1)),
                     scenes=[dict(id='a', start=2.0, end=4.0, layout='foco_reacao', fade=0)])
+        if not base:
+            raise SystemExit('sem prévia inicial: ' + json.dumps(srv.post('/api/project/get', {'id': cid})['preview']))
         project = dict(base['project'] or {}, composition=comp)
         saved = srv.post('/api/project/save', {'id': cid, 'version': base['version'], 'project': project, 'preview': True, 'learn': False})
         again = wait_for(lambda: preview_ready(saved['version']), 240)
         check('t4_previa_nova_pronta_apos_escolher_layout', bool(again))
         if again:
             (work / 'prev1.mp4').write_bytes(srv.get(f'/media/preview?id={cid}&pv={again["preview"]["version"]}'))
-            f0, f1 = frames(work / 'prev0.mp4', .5, 'scale=54:96,format=gray'), frames(work / 'prev1.mp4', .5, 'scale=54:96,format=gray')
+            f0, f1 = frames(work / 'prev0.mp4', .5, 54, 96), frames(work / 'prev1.mp4', .5, 54, 96)
             check('t4_previa_muda_com_o_layout', float(np.abs(f0 - f1).mean()) > 8, float(np.abs(f0 - f1).mean()))
         # exportação
-        ver = srv.post('/api/project/get', {'id': cid})['version']
-        srv.post('/api/review', {'id': cid, 'version': ver, 'action': 'approve', 'quality_mode': 'rapido'})
+        cur = srv.post('/api/project/get', {'id': cid})
+        srv.post('/api/review', {'id': cid, 'version': cur['version'], 'start': cur['start'], 'end': cur['end'], 'action': 'approve', 'quality_mode': 'rapido'})
         done = wait_for(lambda: (lambda r: r if r['status'] == 'done' else None)(srv.post('/api/project/get', {'id': cid})), 300, 2)
         check('t5_exportacao_concluida', bool(done), (srv.post('/api/project/get', {'id': cid}) or {}).get('error'))
         if done:

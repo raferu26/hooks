@@ -163,6 +163,24 @@ with sync_playwright() as p:
     wait(pg, "ST.data.preview&&ST.data.preview.available&&ST.data.preview.ready", 120000)
     cand = pg.evaluate("ST.id")
     pg.screenshot(path=f'{OUT}/5_previa_video.png')
+    # os oito layouts, um a um, pela interface (cartões visíveis, troca efetiva, prévia imediata quando as regiões existem)
+    pg.click('[data-sec="frame"]') if not pg.evaluate("ST.secs.has('frame')") else None
+    wait(pg, "!!document.querySelector('[data-rxl]')")
+    if not pg.evaluate("!!document.querySelector('[data-rxl=\"cinema\"]')"):
+        pg.click('[data-rx="more"]')
+    pg.screenshot(path=f'{OUT}/6_oito_layouts.png')
+    for lid in ['cam_compacta', 'cam_ampliada', 'cam_flutuante', 'cam_embaixo', 'foco_reacao', 'dueto', 'duas_cams', 'cinema']:
+        pg.click(f'[data-rxl="{lid}"]')
+        wait(pg, f"ST.proj.composition&&ST.proj.composition.layout==='{lid}'")
+        pg.wait_for_timeout(400)                       # o seletor abre ~50 ms depois da troca
+        if pg.evaluate("!!document.getElementById('rxModal')"):
+            pg.keyboard.press('Escape')              # layouts de 3 regiões pedem a webcam 2: o seletor abre sozinho
+            wait(pg, "!document.getElementById('rxModal')")
+        ready = pg.evaluate("rxReady(ST.proj.composition)")
+        if ready:
+            wait(pg, f"RX.plan&&RX.plan.layout==='{lid}'&&RX.plan.ready", 20000)
+        check(f'layout_{lid}_selecionavel' + ('_com_previa' if ready else '_pede_regiao'), True)
+    pg.screenshot(path=f'{OUT}/7_ultimo_layout.png')
     # remover composição volta ao padrão
     pg.click('[data-rx="remove"]')
     wait(pg, "ST.proj.composition===null")

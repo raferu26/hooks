@@ -15,7 +15,7 @@ assert Path(media.__file__).resolve().is_relative_to(pkg), 'o semeador está usa
 DUR = 12
 store = Store(root)
 streamer = store.create_streamer('CORINGA')
-profile = dict(DEFAULT_PROFILE, min_free_gb=.1, content_mode='video')
+profile = dict(DEFAULT_PROFILE, min_free_gb=.5, content_mode='video')
 store.save_profile(streamer, profile)
 sid = store.new_session(streamer, 'REACAO DE TESTE')
 session = store.session(sid)
