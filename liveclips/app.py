@@ -690,7 +690,8 @@ class App:
         import sys
         from . import funcionalidades
         info=buildinfo.read();status=media.tool_status()
-        try:ffmpeg=media.run([media.tool('ffmpeg'),'-version'],20).splitlines()[0]
+        try:
+            raw=media.run([media.tool('ffmpeg'),'-version'],20);ffmpeg=(raw.decode('utf-8','replace') if isinstance(raw,bytes) else raw).splitlines()[0]
         except Exception as exc:ffmpeg='indisponível: '+str(exc)[:80]
         rows=funcionalidades.run_all(root=self.store.root,render=False)
         return dict(
